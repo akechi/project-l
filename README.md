@@ -1,2 +1,3 @@
-# java-project-l
-Yet another lingr client for Android OS
+# Project L
+<font size="huge" color="red">This project has a name...
+It's "Project L"!!!</font>
