@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <string name="app_name">Maven Quickstart</string>
+    <string name="app_name">ProjectL</string>
     <string name="hello">Hello project-l!</string>
     <string name="action_settings">Settings</string>
     <string name="hello_world">Hello world!</string>
 
+    <string name="authenticator_label">Lingr</string>
+    <string name="title_fmt">title fmt</string>
+    <string name="key1_action">key1 action</string>
+    <string name="key1_summary">key1 summary</string>
 </resources>
