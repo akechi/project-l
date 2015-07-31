@@ -6,7 +6,4 @@
     <string name="hello_world">Hello world!</string>
 
     <string name="authenticator_label">Lingr</string>
-    <string name="title_fmt">title fmt</string>
-    <string name="key1_action">key1 action</string>
-    <string name="key1_summary">key1 summary</string>
 </resources>

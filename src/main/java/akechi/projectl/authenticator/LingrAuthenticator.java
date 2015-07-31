@@ -10,9 +10,12 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
+
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.common.base.Strings;
+
 import jp.michikusa.chitose.lingr.LingrClient;
+import jp.michikusa.chitose.lingr.LingrClientFactory;
 import jp.michikusa.chitose.lingr.Session;
 
 public class LingrAuthenticator
@@ -66,24 +69,25 @@ public class LingrAuthenticator
         {
             final String password= manager.getPassword(account);
             final String apiKey= manager.getUserData(account, "apiKey");
-            final LingrClient lingr= new LingrClient();
+            final LingrClientFactory lingrFactory= LingrClientFactory.newLingrClientFactory(AndroidHttp.newCompatibleTransport());
+            final LingrClient lingr= lingrFactory.newLingrClient();
             try
             {
                 if(Strings.isNullOrEmpty(apiKey))
                 {
-                    final Session session= lingr.createSession(account.name, password);
-                    authToken= session.getSession();
+                    authToken= lingr.createSession(account.name, password);
                 }
                 else
                 {
-                    final Session session= lingr.createSession(account.name, password, apiKey);
-                    authToken= session.getSession();
+                    authToken= lingr.createSession(account.name, password, apiKey);
                 }
             }
             catch(Exception e)
             {
                 Log.e("LingrAuthenticator", "Couldn't get authToken", e);
-                Toast.makeText(this.context, "Wrong password or Lingr is dead?", Toast.LENGTH_SHORT).show();
+                final Bundle bundle= new Bundle();
+                bundle.putInt(AccountManager.KEY_ERROR_CODE, 1);
+                bundle.putString(AccountManager.KEY_ERROR_MESSAGE, "Wrong userId or password, maybe Lingr is dead?");
             }
         }
 

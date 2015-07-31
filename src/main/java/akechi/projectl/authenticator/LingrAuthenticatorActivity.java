@@ -1,16 +1,26 @@
 package akechi.projectl.authenticator;
 
 import akechi.projectl.R;
-import android.accounts.AccountAuthenticatorActivity;
+
 import android.accounts.Account;
+import android.accounts.AccountAuthenticatorActivity;
 import android.accounts.AccountManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.Button;
 import android.view.View;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
+
+import com.google.api.client.extensions.android.http.AndroidHttp;
+import com.google.common.base.Strings;
+
+import jp.michikusa.chitose.lingr.LingrClient;
+import jp.michikusa.chitose.lingr.LingrClientFactory;
+import jp.michikusa.chitose.lingr.Session;
 
 public class LingrAuthenticatorActivity
     extends AccountAuthenticatorActivity
@@ -39,14 +49,52 @@ public class LingrAuthenticatorActivity
         final String name= this.userIdText.getText().toString();
         final String password= this.passwordText.getText().toString();
         final String apiKey= this.apiKeyText.getText().toString();
+        final LingrAuthenticatorActivity that= this;
+        new AsyncTask<Void, Void, String>(){
+            @Override
+            public String doInBackground(Void... params)
+            {
+                try
+                {
+                    final LingrClientFactory lingrFactory= LingrClientFactory.newLingrClientFactory(AndroidHttp.newCompatibleTransport());
+                    final LingrClient lingr= lingrFactory.newLingrClient();
+                    if(Strings.isNullOrEmpty(apiKey))
+                    {
+                        return lingr.createSession(name, password);
+                    }
+                    else
+                    {
+                        return lingr.createSession(name, password, apiKey);
+                    }
+                }
+                catch(Exception e)
+                {
+                    Log.e("LingrAuthenticatorActivity", "Couldn't create session", e);
+                    return null;
+                }
+            }
 
-        final Account account= new Account(name, "com.lingr");
-        final Bundle data= new Bundle();
-        data.putString("apiKey", apiKey);
+            @Override
+            public void onPostExecute(String authToken)
+            {
+                if(Strings.isNullOrEmpty(authToken))
+                {
+                    Toast.makeText(that, "Something wrong?", Toast.LENGTH_SHORT).show();
+                    return;
+                }
 
-        AccountManager.get(this).addAccountExplicitly(account, password, data);
+                final Account account= new Account(name, "com.lingr");
+                final Bundle data= new Bundle();
+                data.putString("apiKey", apiKey);
 
-        this.finish();
+                final AccountManager manager= AccountManager.get(that);
+                manager.addAccountExplicitly(account, password, data);
+                manager.setAuthToken(account, "", authToken);
+                Toast.makeText(that, "Account successfuly added", Toast.LENGTH_SHORT).show();
+
+                that.finish();
+            }
+        }.execute();
     }
 
     private EditText userIdText;

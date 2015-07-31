@@ -1,12 +1,12 @@
 package akechi.projectl;
 
+import android.accounts.Account;
+import android.accounts.AccountManager;
 import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.widget.Toast;
-import android.accounts.AccountManager;
-import android.accounts.Account;
 
 public class HomeActivity
     extends Activity
@@ -24,7 +24,7 @@ public class HomeActivity
         try
         {
             final Bundle bundle= manager.getAuthToken(accounts[0], "", null, this, null, null).getResult();
-            Toast.makeText(this, String.format("bundle=%s", bundle), Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, String.format("bundle=%s", bundle), Toast.LENGTH_LONG).show();
         }
         catch(Exception e)
         {
