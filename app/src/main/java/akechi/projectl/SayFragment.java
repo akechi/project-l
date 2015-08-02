@@ -18,7 +18,9 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import com.google.api.client.extensions.android.http.AndroidHttp;
+import com.google.api.client.repackaged.com.google.common.base.Strings;
 
+import java.io.EOFException;
 import java.io.IOException;
 
 import jp.michikusa.chitose.lingr.LingrClient;
@@ -46,28 +48,45 @@ public class SayFragment
     {
         final SayFragment that= this;
         final AccountManager manager= AccountManager.get(this.getActivity());
+        this.sayButton.setEnabled(false);
         new AsyncTask<String, Void, Boolean>(){
             @Override
             protected Boolean doInBackground(String... params) {
                 final String text= params[0];
-                final String roomId= that.roomId;
-                final Account[] accounts= manager.getAccountsByType("com.lingr");
-                if(accounts.length <= 0)
+                final AppContext appContext= (AppContext)that.getActivity().getApplicationContext();
+                final Account account= appContext.getAccount();
+                if(account == null)
                 {
-                    this.message= "First, you have to create lingr account";
                     return Boolean.FALSE;
                 }
-                final Account account= accounts[0];
+                final String roomId= appContext.getRoomId(account);
+                if(Strings.isNullOrEmpty(roomId))
+                {
+                    return Boolean.FALSE;
+                }
                 try
                 {
-                    final LingrClient lingr= lingrFactory.newLingrClient();
-                    String authToken= manager.blockingGetAuthToken(account, "", true);
-                    if(!lingr.verifySession(authToken))
+                    boolean done= false;
+                    while(!done)
                     {
-                        manager.invalidateAuthToken("com.lingr", authToken);
-                        authToken= manager.blockingGetAuthToken(account, "", true);
+                        try
+                        {
+                            final LingrClient lingr= lingrFactory.newLingrClient();
+                            String authToken= manager.blockingGetAuthToken(account, "", true);
+                            if(!lingr.verifySession(authToken))
+                            {
+                                manager.invalidateAuthToken("com.lingr", authToken);
+                                authToken= manager.blockingGetAuthToken(account, "", true);
+                            }
+                            lingr.say(authToken, roomId, text);
+                            done= true;
+                        }
+                        catch(EOFException e)
+                        {
+                            // sleep and retry
+                            Thread.sleep(2000);
+                        }
                     }
-                    lingr.say(authToken, roomId, text);
                     return true;
                 }
                 catch (Exception e)
@@ -90,6 +109,7 @@ public class SayFragment
                     // close keypad
                     final InputMethodManager imeManager= (InputMethodManager)that.getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
                     imeManager.hideSoftInputFromWindow(that.inputText.getWindowToken(), 0);
+                    that.sayButton.setEnabled(true);
                     Toast.makeText(that.getActivity(), "Posted", Toast.LENGTH_SHORT).show();
                 }
             }
@@ -101,13 +121,10 @@ public class SayFragment
     @Override
     public void onRoomSelected(CharSequence roomId)
     {
-        this.roomId= roomId.toString();
     }
 
     private static final LingrClientFactory lingrFactory= LingrClientFactory.newLingrClientFactory(AndroidHttp.newCompatibleTransport());
 
     private EditText inputText;
     private Button sayButton;
-
-    private String roomId;
 }

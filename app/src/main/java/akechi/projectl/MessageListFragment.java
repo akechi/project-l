@@ -24,6 +24,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.api.client.extensions.android.http.AndroidHttp;
+import com.google.api.client.http.HttpHeaders;
+import com.google.api.client.http.HttpRequest;
+import com.google.api.client.repackaged.com.google.common.base.Strings;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
@@ -32,8 +35,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import jp.michikusa.chitose.lingr.Archive;
+import jp.michikusa.chitose.lingr.Events;
 import jp.michikusa.chitose.lingr.LingrClient;
 import jp.michikusa.chitose.lingr.LingrClientFactory;
 import jp.michikusa.chitose.lingr.Room;
@@ -49,6 +54,17 @@ public class MessageListFragment
         super.onCreate(savedInstanceState);
 
         this.getLoaderManager().initLoader(0, null, this);
+
+        final AppContext appContext= (AppContext)this.getActivity().getApplicationContext();
+        final Account account= appContext.getAccount();
+        if(account != null)
+        {
+            final String roomId= appContext.getRoomId(account);
+            if(!Strings.isNullOrEmpty(roomId))
+            {
+                this.getLoaderManager().getLoader(0).forceLoad();
+            }
+        }
     }
 
     @Override
@@ -66,27 +82,12 @@ public class MessageListFragment
     }
 
     @Override
-    public void onSaveInstanceState(Bundle outState)
-    {
-        super.onSaveInstanceState(outState);
-    }
-
-    @Override
-    public void onViewStateRestored(Bundle savedInstanceState)
-    {
-        super.onViewStateRestored(savedInstanceState);
-    }
-
-    @Override
     public void onRoomSelected(CharSequence roomId)
     {
         Log.i("MessageListFragment", "On room selected " + roomId);
-        if(!roomId.toString().equals(this.roomId))
-        {
-            final MessageAdapter adapter= (MessageAdapter)this.messageView.getAdapter();
-            adapter.clear();
-        }
-        this.roomId= roomId.toString();
+        final MessageAdapter adapter= (MessageAdapter)this.messageView.getAdapter();
+        adapter.clear();
+        adapter.notifyDataSetChanged();
 
         this.swipeRefreshLayout.setRefreshing(true);
         this.getLoaderManager().getLoader(0).forceLoad();
@@ -95,6 +96,12 @@ public class MessageListFragment
     @Override
     public void onRefresh()
     {
+        if(this.messageView.getCount() <= 0)
+        {
+            this.swipeRefreshLayout.setRefreshing(false);
+            return;
+        }
+
         final MessageListFragment that= this;
         final AccountManager manager= AccountManager.get(this.getActivity());
         final Message oldestMessage= (Message)this.messageView.getAdapter().getItem(0);
@@ -103,17 +110,22 @@ public class MessageListFragment
             protected List<Message> doInBackground(String... params)
             {
                 final String id= params[0];
-                final String roomId= that.roomId;
-                final Account[] accounts= manager.getAccountsByType("com.lingr");
-                if(accounts.length <= 0)
+                final AppContext appContext= (AppContext)that.getActivity().getApplicationContext();
+                final Account account= appContext.getAccount();
+                if(account == null)
                 {
-                    this.message= "First, you have to create lingr account";
+                    that.swipeRefreshLayout.setRefreshing(false);
                     return Collections.emptyList();
                 }
-                final Account account= accounts[0];
+                final String roomId= appContext.getRoomId(account);
+                if(Strings.isNullOrEmpty(roomId))
+                {
+                    that.swipeRefreshLayout.setRefreshing(false);
+                    return Collections.emptyList();
+                }
                 try
                 {
-                    final LingrClient lingr= lingrFactory.newLingrClient();
+                    final LingrClient lingr= appContext.getLingrClient();
                     String authToken= manager.blockingGetAuthToken(account, "", true);
                     if(!lingr.verifySession(authToken))
                     {
@@ -137,6 +149,7 @@ public class MessageListFragment
                 final MessageAdapter adapter= (MessageAdapter)that.messageView.getAdapter();
                 adapter.insertHead(messages);
                 adapter.notifyDataSetChanged();
+                that.messageView.setSelection(messages.size());
                 that.swipeRefreshLayout.setRefreshing(false);
             }
 
@@ -161,64 +174,7 @@ public class MessageListFragment
     @Override
     public Loader<Iterable<Message>> onCreateLoader(int id, Bundle args)
     {
-        final MessageListFragment that= this;
-        final AccountManager manager= AccountManager.get(this.getActivity());
-        final Loader<Iterable<Message>> loader= new AsyncTaskLoader<Iterable<Message>>(this.getActivity()){
-            @Override
-            public Iterable<Message> loadInBackground()
-            {
-                final String roomId= that.roomId;
-                final Account[] accounts= manager.getAccountsByType("com.lingr");
-                if(accounts.length <= 0)
-                {
-                    Log.i("MessageListFragment", "There's no account, return empty list immediately");
-                    return Collections.<Message>emptyList();
-                }
-                // TODO choose account
-                final Account account= accounts[0];
-                try
-                {
-                    String authToken= manager.blockingGetAuthToken(account, "", true);
-                    final LingrClient lingr= lingrFactory.newLingrClient();
-                    if(!lingr.verifySession(authToken))
-                    {
-                        Log.i("MessageListFragment", "authToken " + authToken + " is expired");
-                        manager.invalidateAuthToken("com.lingr", authToken);
-                        authToken= manager.blockingGetAuthToken(account, "", true);
-                    }
-
-                    final Room room= lingr.showRoom(authToken, roomId);
-                    final Room.RoomInfo info= Iterables.find(room.getRooms(), new Predicate<Room.RoomInfo>(){
-                        @Override
-                        public boolean apply(Room.RoomInfo input)
-                        {
-                            return roomId.equals(input.getId());
-                        }
-                    });
-                    return info.getMessages();
-                }
-                catch(EOFException e)
-                {
-                    Log.e("MessageListFragment", "Couldn't enter a room " + roomId, e);
-                    final Handler handler= new Handler(Looper.getMainLooper());
-                    final Context ctx= this.getContext();
-                    handler.post(new Runnable(){
-                        @Override
-                        public void run()
-                        {
-                            Toast.makeText(ctx, "Unexpectedly EOFException detected", Toast.LENGTH_LONG).show();
-                        }
-                    });
-                    return Collections.<Message>emptyList();
-                }
-                catch(Exception e)
-                {
-                    Log.e("MessageListFragment", "Couldn't enter a room " + roomId, e);
-                    return Collections.<Message>emptyList();
-                }
-            }
-        };
-        return loader;
+        return new MessageListLoader(this.getActivity());
     }
 
     @Override
@@ -301,11 +257,73 @@ public class MessageListFragment
         private final List<Message> messages = new LinkedList<>();
     }
 
-    private static final LingrClientFactory lingrFactory= LingrClientFactory.newLingrClientFactory(AndroidHttp.newCompatibleTransport());
+    private static final class MessageListLoader
+        extends AsyncTaskLoader<Iterable<Message>>
+    {
+        public MessageListLoader(Context context)
+        {
+            super(context);
+        }
+
+        @Override
+        public Iterable<Message> loadInBackground()
+        {
+            final AppContext appContext= (AppContext)this.getContext().getApplicationContext();
+            final Account account= appContext.getAccount();
+            if(account == null)
+            {
+                return Collections.<Message>emptyList();
+            }
+            final String roomId= appContext.getRoomId(account);
+            if(Strings.isNullOrEmpty(roomId))
+            {
+                return Collections.<Message>emptyList();
+            }
+            try
+            {
+                final AccountManager manager= AccountManager.get(this.getContext());
+                String authToken= manager.blockingGetAuthToken(account, "", true);
+                final LingrClient lingr= appContext.getLingrClient();
+                if(!lingr.verifySession(authToken))
+                {
+                    Log.i("MessageListFragment", "authToken " + authToken + " is expired");
+                    manager.invalidateAuthToken("com.lingr", authToken);
+                    authToken= manager.blockingGetAuthToken(account, "", true);
+                }
+
+                final Room room= lingr.showRoom(authToken, roomId);
+                final Room.RoomInfo info= Iterables.find(room.getRooms(), new Predicate<Room.RoomInfo>(){
+                    @Override
+                    public boolean apply(Room.RoomInfo input)
+                    {
+                        return roomId.equals(input.getId());
+                    }
+                });
+                return info.getMessages();
+            }
+            catch(EOFException e)
+            {
+                Log.e("MessageListFragment", "Couldn't enter a room " + roomId, e);
+                final Handler handler= new Handler(Looper.getMainLooper());
+                final Context ctx= this.getContext();
+                handler.post(new Runnable(){
+                    @Override
+                    public void run()
+                    {
+                        Toast.makeText(ctx, "Unexpectedly EOFException detected", Toast.LENGTH_LONG).show();
+                    }
+                });
+                return Collections.<Message>emptyList();
+            }
+            catch(Exception e)
+            {
+                Log.e("MessageListFragment", "Couldn't enter a room " + roomId, e);
+                return Collections.<Message>emptyList();
+            }
+        }
+    }
 
     private SwipeRefreshLayout swipeRefreshLayout;
 
     private ListView messageView;
-
-    private String roomId;
 }
