@@ -63,6 +63,7 @@ public class LingrAuthenticator
     @Override
     public Bundle getAuthToken(AccountAuthenticatorResponse response, Account account, String authTokenType, Bundle options)
     {
+        Log.i("LingrAuthenticator", "getAuthToken() with " + account.name);
         final AccountManager manager= AccountManager.get(this.context);
         String authToken= manager.peekAuthToken(account, authTokenType);
         if(Strings.isNullOrEmpty(authToken))
@@ -88,17 +89,28 @@ public class LingrAuthenticator
                 final Bundle bundle= new Bundle();
                 bundle.putInt(AccountManager.KEY_ERROR_CODE, 1);
                 bundle.putString(AccountManager.KEY_ERROR_MESSAGE, "Wrong userId or password, maybe Lingr is dead?");
+                return bundle;
             }
         }
+        if(Strings.isNullOrEmpty(authToken))
+        {
+            Log.i("LingrAuthenticator", "Edit account properties");
+            // invalid password? try again
+            final Intent intent= new Intent(this.context, LingrAuthenticatorActivity.class);
+            intent.putExtra(LingrAuthenticatorActivity.ARG_ACCOUNT_TYPE, account.type);
+            intent.putExtra(LingrAuthenticatorActivity.ARG_AUTH_TYPE, authTokenType);
+            intent.putExtra(AccountManager.KEY_ACCOUNT_AUTHENTICATOR_RESPONSE, response);
 
-        // invalid password? try again
-        final Intent intent= new Intent(this.context, LingrAuthenticatorActivity.class);
-        intent.putExtra(LingrAuthenticatorActivity.ARG_ACCOUNT_TYPE, account.type);
-        intent.putExtra(LingrAuthenticatorActivity.ARG_AUTH_TYPE, authTokenType);
-        intent.putExtra(AccountManager.KEY_ACCOUNT_AUTHENTICATOR_RESPONSE, response);
+            final Bundle bundle= new Bundle();
+            bundle.putParcelable(AccountManager.KEY_INTENT, intent);
+            return bundle;
+        }
 
+        Log.i("LingrAuthenticator", "Got authToken " + authToken);
         final Bundle bundle= new Bundle();
-        bundle.putParcelable(AccountManager.KEY_INTENT, intent);
+        bundle.putString(AccountManager.KEY_ACCOUNT_NAME, account.name);
+        bundle.putString(AccountManager.KEY_ACCOUNT_TYPE, account.type);
+        bundle.putString(AccountManager.KEY_AUTHTOKEN, authToken);
         return bundle;
     }
 
