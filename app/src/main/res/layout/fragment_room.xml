@@ -1,0 +1,28 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="akechi.projectl.RoomFragment"
+    >
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center"
+        >
+        <fragment
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:name="akechi.projectl.MessageListFragment"
+            android:layout_gravity="center"
+            android:tag="messageList"
+            android:layout_weight="9" />
+        <fragment
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:name="akechi.projectl.SayFragment"
+            android:layout_gravity="center"
+            android:tag="say"
+            android:layout_weight="1" />
+    </LinearLayout>
+</FrameLayout>

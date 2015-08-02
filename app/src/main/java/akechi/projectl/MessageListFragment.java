@@ -4,6 +4,7 @@ import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.content.Context;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -27,10 +28,12 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
 import java.io.EOFException;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
+import jp.michikusa.chitose.lingr.Archive;
 import jp.michikusa.chitose.lingr.LingrClient;
 import jp.michikusa.chitose.lingr.LingrClientFactory;
 import jp.michikusa.chitose.lingr.Room;
@@ -92,15 +95,53 @@ public class MessageListFragment
     @Override
     public void onRefresh()
     {
-        this.swipeRefreshLayout.setRefreshing(false);
-//        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-//            @Override
-//            public void run() {
-//                that.addMessage("message - " + DateFormat.getDateTimeInstance().format(new Date()));
-//                that.swipeRefreshLayout.setRefreshing(false);
-//                Toast.makeText(that.getActivity(), "Older messages loaded", Toast.LENGTH_SHORT).show();
-//            }
-//        }, TimeUnit.SECONDS.toMillis(1));
+        final MessageListFragment that= this;
+        final AccountManager manager= AccountManager.get(this.getActivity());
+        final Message oldestMessage= (Message)this.messageView.getAdapter().getItem(0);
+        new AsyncTask<String, Void, List<Message>>(){
+            @Override
+            protected List<Message> doInBackground(String... params)
+            {
+                final String id= params[0];
+                final String roomId= that.roomId;
+                final Account[] accounts= manager.getAccountsByType("com.lingr");
+                if(accounts.length <= 0)
+                {
+                    this.message= "First, you have to create lingr account";
+                    return Collections.emptyList();
+                }
+                final Account account= accounts[0];
+                try
+                {
+                    final LingrClient lingr= lingrFactory.newLingrClient();
+                    String authToken= manager.blockingGetAuthToken(account, "", true);
+                    if(!lingr.verifySession(authToken))
+                    {
+                        manager.invalidateAuthToken("com.lingr", authToken);
+                        authToken= manager.blockingGetAuthToken(account, "", true);
+                    }
+                    final Archive archive= lingr.getArchive(authToken, roomId, id, 100);
+                    return archive.getMessages();
+                }
+                catch (Exception e)
+                {
+                    Log.e("MessageListFragment", "Couldn't load archives from " + roomId, e);
+                    this.message= e.toString();
+                    return Collections.emptyList();
+                }
+            }
+
+            @Override
+            protected void onPostExecute(List<Message> messages)
+            {
+                final MessageAdapter adapter= (MessageAdapter)that.messageView.getAdapter();
+                adapter.insertHead(messages);
+                adapter.notifyDataSetChanged();
+                that.swipeRefreshLayout.setRefreshing(false);
+            }
+
+            private String message;
+        }.execute(oldestMessage.getId());
     }
 
     @Override
@@ -112,7 +153,8 @@ public class MessageListFragment
         for (final Message m : data) {
             adapter.add(m);
         }
-        this.messageView.invalidate();
+        ((MessageAdapter)this.messageView.getAdapter()).notifyDataSetChanged();
+        this.messageView.setSelection(this.messageView.getAdapter().getCount() - 1);
         this.swipeRefreshLayout.setRefreshing(false);
     }
 
@@ -192,6 +234,11 @@ public class MessageListFragment
         {
             this.context = context;
             this.messages.addAll(messages);
+        }
+
+        public void insertHead(Collection<? extends Message> messages)
+        {
+            this.messages.addAll(0, messages);
         }
 
         public void add(Message e)

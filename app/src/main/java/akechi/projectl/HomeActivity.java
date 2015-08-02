@@ -2,59 +2,17 @@ package akechi.projectl;
 
 import android.accounts.Account;
 import android.accounts.AccountManager;
-import android.accounts.AccountManagerCallback;
-import android.accounts.AccountManagerFuture;
-import android.app.Activity;
-import android.content.Context;
-import android.content.Intent;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentStatePagerAdapter;
-import android.support.v4.app.FragmentTransaction;
-import android.support.v4.content.Loader;
 import android.support.v4.view.ViewPager;
-import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBar;
-import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
-import android.view.Gravity;
-import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.ListView;
-import android.widget.TextView;
-import android.widget.Toast;
 
-import com.google.common.base.Function;
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Predicates;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
-
-import javax.annotation.Nullable;
-
-import jp.michikusa.chitose.lingr.LingrClient;
-import jp.michikusa.chitose.lingr.LingrException;
-import jp.michikusa.chitose.lingr.Room;
 
 public class HomeActivity
     extends AppCompatActivity
@@ -102,9 +60,8 @@ public class HomeActivity
         pager.setCurrentItem(SwipeSwitcher.POS_ROOM, true);
 
         final SwipeSwitcher adapter= (SwipeSwitcher)pager.getAdapter();
-        final MessageListFragment fragment= (MessageListFragment)adapter.getFragment(SwipeSwitcher.POS_ROOM);
-
-        fragment.onRoomSelected(roomId);
+        final Fragment fragment= adapter.getFragment(SwipeSwitcher.POS_ROOM);
+        ((RoomListFragment.OnRoomSelectedListener)fragment).onRoomSelected(roomId);
     }
 
     public static final class SwipeSwitcher
@@ -139,7 +96,7 @@ public class HomeActivity
                     return fragment;
                 }
                 case POS_ROOM:{
-                    final Fragment fragment= new MessageListFragment();
+                    final Fragment fragment= new RoomFragment();
                     this.fragments.put(position, fragment);
                     return fragment;
                 }
