@@ -28,19 +28,24 @@ import com.google.api.client.http.HttpHeaders;
 import com.google.api.client.http.HttpRequest;
 import com.google.api.client.repackaged.com.google.common.base.Strings;
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 import java.io.EOFException;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import akechi.projectl.async.LingrTaskLoader;
 import jp.michikusa.chitose.lingr.Archive;
 import jp.michikusa.chitose.lingr.Events;
 import jp.michikusa.chitose.lingr.LingrClient;
 import jp.michikusa.chitose.lingr.LingrClientFactory;
+import jp.michikusa.chitose.lingr.LingrException;
 import jp.michikusa.chitose.lingr.Room;
 import jp.michikusa.chitose.lingr.Room.Message;
 
@@ -53,7 +58,8 @@ public class MessageListFragment
     {
         super.onCreate(savedInstanceState);
 
-        this.getLoaderManager().initLoader(0, null, this);
+        this.getLoaderManager().initLoader(LOADER_SHOW_ROOM, null, this);
+        this.getLoaderManager().initLoader(LOADER_GET_ARCHIVE, null, this);
 
         final AppContext appContext= (AppContext)this.getActivity().getApplicationContext();
         final Account account= appContext.getAccount();
@@ -62,7 +68,7 @@ public class MessageListFragment
             final String roomId= appContext.getRoomId(account);
             if(!Strings.isNullOrEmpty(roomId))
             {
-                this.getLoaderManager().getLoader(0).forceLoad();
+                this.getLoaderManager().getLoader(LOADER_SHOW_ROOM).forceLoad();
             }
         }
     }
@@ -90,91 +96,70 @@ public class MessageListFragment
         adapter.notifyDataSetChanged();
 
         this.swipeRefreshLayout.setRefreshing(true);
-        this.getLoaderManager().getLoader(0).forceLoad();
+        this.getLoaderManager().getLoader(LOADER_SHOW_ROOM).forceLoad();
     }
 
     @Override
     public void onRefresh()
     {
-        if(this.messageView.getCount() <= 0)
-        {
-            this.swipeRefreshLayout.setRefreshing(false);
-            return;
-        }
-
-        final MessageListFragment that= this;
-        final AccountManager manager= AccountManager.get(this.getActivity());
-        final Message oldestMessage= (Message)this.messageView.getAdapter().getItem(0);
-        new AsyncTask<String, Void, List<Message>>(){
-            @Override
-            protected List<Message> doInBackground(String... params)
-            {
-                final String id= params[0];
-                final AppContext appContext= (AppContext)that.getActivity().getApplicationContext();
-                final Account account= appContext.getAccount();
-                if(account == null)
-                {
-                    that.swipeRefreshLayout.setRefreshing(false);
-                    return Collections.emptyList();
-                }
-                final String roomId= appContext.getRoomId(account);
-                if(Strings.isNullOrEmpty(roomId))
-                {
-                    that.swipeRefreshLayout.setRefreshing(false);
-                    return Collections.emptyList();
-                }
-                try
-                {
-                    final LingrClient lingr= appContext.getLingrClient();
-                    String authToken= manager.blockingGetAuthToken(account, "", true);
-                    if(!lingr.verifySession(authToken))
-                    {
-                        manager.invalidateAuthToken("com.lingr", authToken);
-                        authToken= manager.blockingGetAuthToken(account, "", true);
-                    }
-                    final Archive archive= lingr.getArchive(authToken, roomId, id, 100);
-                    return archive.getMessages();
-                }
-                catch (Exception e)
-                {
-                    Log.e("MessageListFragment", "Couldn't load archives from " + roomId, e);
-                    this.message= e.toString();
-                    return Collections.emptyList();
-                }
-            }
-
-            @Override
-            protected void onPostExecute(List<Message> messages)
-            {
-                final MessageAdapter adapter= (MessageAdapter)that.messageView.getAdapter();
-                adapter.insertHead(messages);
-                adapter.notifyDataSetChanged();
-                that.messageView.setSelection(messages.size());
-                that.swipeRefreshLayout.setRefreshing(false);
-            }
-
-            private String message;
-        }.execute(oldestMessage.getId());
+        this.getLoaderManager().getLoader(LOADER_GET_ARCHIVE).forceLoad();
     }
 
     @Override
     public void onLoadFinished(Loader<Iterable<Message>> loader, Iterable<Message> data)
     {
-        Log.i("MessageListFragment", String.format("got %d messages", Iterables.size(data)));
-
-        final MessageAdapter adapter= (MessageAdapter)this.messageView.getAdapter();
-        for (final Message m : data) {
-            adapter.add(m);
-        }
-        ((MessageAdapter)this.messageView.getAdapter()).notifyDataSetChanged();
-        this.messageView.setSelection(this.messageView.getAdapter().getCount() - 1);
         this.swipeRefreshLayout.setRefreshing(false);
+        if(data == null)
+        {
+            return;
+        }
+        Log.i("MessageListFragment", String.format("got %d messages", Iterables.size(data)));
+        switch(loader.getId())
+        {
+            case LOADER_SHOW_ROOM:{
+                final MessageAdapter adapter= (MessageAdapter)this.messageView.getAdapter();
+                for(final Message m : data)
+                {
+                    adapter.add(m);
+                }
+                ((MessageAdapter)this.messageView.getAdapter()).notifyDataSetChanged();
+                this.messageView.setSelection(this.messageView.getAdapter().getCount() - 1);
+                break;
+            }
+            case LOADER_GET_ARCHIVE:{
+                final MessageAdapter adapter= (MessageAdapter)this.messageView.getAdapter();
+                adapter.insertHead(Lists.newArrayList(data));
+                adapter.notifyDataSetChanged();
+                this.messageView.setSelection(Iterables.size(data));
+                break;
+            }
+            default:
+                throw new AssertionError("Unknown loader id: " + loader.getId());
+        }
     }
 
     @Override
     public Loader<Iterable<Message>> onCreateLoader(int id, Bundle args)
     {
-        return new MessageListLoader(this.getActivity());
+        switch(id)
+        {
+            case LOADER_SHOW_ROOM:
+                return new MessageListLoader(this.getActivity());
+            case LOADER_GET_ARCHIVE:
+                return new ArchiveLoader(this.getActivity(), new Supplier<Message>(){
+                    @Override
+                    public Message get()
+                    {
+                        if(messageView.getCount() <= 0)
+                        {
+                            return null;
+                        }
+                        return (Message)messageView.getAdapter().getItem(0);
+                    }
+                });
+            default:
+                throw new AssertionError("Unknown loader id: " + id);
+        }
     }
 
     @Override
@@ -258,7 +243,7 @@ public class MessageListFragment
     }
 
     private static final class MessageListLoader
-        extends AsyncTaskLoader<Iterable<Message>>
+        extends LingrTaskLoader<Iterable<Message>>
     {
         public MessageListLoader(Context context)
         {
@@ -266,62 +251,64 @@ public class MessageListFragment
         }
 
         @Override
-        public Iterable<Message> loadInBackground()
+        public Iterable<Message> loadInBackground(CharSequence authToken, LingrClient lingr)
+            throws IOException, LingrException
         {
-            final AppContext appContext= (AppContext)this.getContext().getApplicationContext();
+            final AppContext appContext= this.getApplicationContext();
             final Account account= appContext.getAccount();
-            if(account == null)
-            {
-                return Collections.<Message>emptyList();
-            }
             final String roomId= appContext.getRoomId(account);
             if(Strings.isNullOrEmpty(roomId))
             {
                 return Collections.<Message>emptyList();
             }
-            try
-            {
-                final AccountManager manager= AccountManager.get(this.getContext());
-                String authToken= manager.blockingGetAuthToken(account, "", true);
-                final LingrClient lingr= appContext.getLingrClient();
-                if(!lingr.verifySession(authToken))
-                {
-                    Log.i("MessageListFragment", "authToken " + authToken + " is expired");
-                    manager.invalidateAuthToken("com.lingr", authToken);
-                    authToken= manager.blockingGetAuthToken(account, "", true);
-                }
 
-                final Room room= lingr.showRoom(authToken, roomId);
-                final Room.RoomInfo info= Iterables.find(room.getRooms(), new Predicate<Room.RoomInfo>(){
-                    @Override
-                    public boolean apply(Room.RoomInfo input)
-                    {
-                        return roomId.equals(input.getId());
-                    }
-                });
-                return info.getMessages();
-            }
-            catch(EOFException e)
-            {
-                Log.e("MessageListFragment", "Couldn't enter a room " + roomId, e);
-                final Handler handler= new Handler(Looper.getMainLooper());
-                final Context ctx= this.getContext();
-                handler.post(new Runnable(){
-                    @Override
-                    public void run()
-                    {
-                        Toast.makeText(ctx, "Unexpectedly EOFException detected", Toast.LENGTH_LONG).show();
-                    }
-                });
-                return Collections.<Message>emptyList();
-            }
-            catch(Exception e)
-            {
-                Log.e("MessageListFragment", "Couldn't enter a room " + roomId, e);
-                return Collections.<Message>emptyList();
-            }
+            final Room room= lingr.showRoom(authToken, roomId);
+            final Room.RoomInfo info= Iterables.find(room.getRooms(), new Predicate<Room.RoomInfo>(){
+                @Override
+                public boolean apply(Room.RoomInfo input)
+                {
+                    return roomId.equals(input.getId());
+                }
+            });
+            return info.getMessages();
         }
     }
+
+    private static final class ArchiveLoader
+        extends LingrTaskLoader<Iterable<Message>>
+    {
+        public ArchiveLoader(Context context, Supplier<Message> oldestMessageSupplier)
+        {
+            super(context);
+
+            this.oldestMessageSupplier= oldestMessageSupplier;
+        }
+
+        @Override
+        public Iterable<Message> loadInBackground(CharSequence authToken, LingrClient lingr)
+            throws IOException, LingrException
+        {
+            final Message oldest= this.oldestMessageSupplier.get();
+            if(oldest == null)
+            {
+                return Collections.emptyList();
+            }
+            final AppContext appContext= this.getApplicationContext();
+            final Account account= appContext.getAccount();
+            final String roomId= appContext.getRoomId(account);
+            if(Strings.isNullOrEmpty(roomId))
+            {
+                return Collections.emptyList();
+            }
+            final Archive archive= lingr.getArchive(authToken, roomId, oldest.getId(), 100);
+            return archive.getMessages();
+        }
+
+        private final Supplier<Message> oldestMessageSupplier;
+    }
+
+    private static final int LOADER_SHOW_ROOM= 0;
+    private static final int LOADER_GET_ARCHIVE= 1;
 
     private SwipeRefreshLayout swipeRefreshLayout;
 

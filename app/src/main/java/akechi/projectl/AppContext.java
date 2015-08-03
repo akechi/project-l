@@ -69,7 +69,7 @@ public class AppContext
         return lingrFactory.newLingrClient();
     }
 
-    private static final LingrClientFactory lingrFactory= LingrClientFactory.newLingrClientFactory(new ApacheHttpTransport());
+    private static final LingrClientFactory lingrFactory= LingrClientFactory.newLingrClientFactory(AndroidHttp.newCompatibleTransport());
 
     private String accountName;
 }

@@ -92,84 +92,89 @@ public class CachedImageView
             final File cacheFile= new File(cacheDir, escape(url));
             if(cacheFile.exists())
             {
-                return BitmapFactory.decodeFile(cacheFile.getAbsolutePath());
-            }
-            else
-            {
-                // ensure load once
-                final boolean loading;
-                synchronized(lock)
-                {
-                    loading= loadingUris.contains(this.uri);
-                    if(!loading)
-                    {
-                        loadingUris.add(this.uri);
-                    }
-                }
-                if(loading) {
-                    while (loadingUris.contains(this.uri)) {
-                        Log.i(LOG_TAG, "Loading " + this.uri + ", wait it");
-                        try {
-                            Thread.sleep(100);
-                        } catch (InterruptedException e) {
-                            break;
-                        }
-                    }
-                    // expects it was cached
-                    return this.doInBackground();
-                }
-
-                InputStream in= null;
                 try
                 {
-                    in= url.openStream();
-                    final Bitmap bitmap= BitmapFactory.decodeStream(in);
-                    OutputStream out= null;
-                    try
-                    {
-                        out= new FileOutputStream(cacheFile);
-                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
-                    }
-                    catch(IOException e)
-                    {
-                        Log.e(LOG_TAG, "Couldn't write cache image to " + cacheFile, e);
-                    }
-                    finally
-                    {
-                        if(out != null)
-                        {
-                            try
-                            {
-                                out.close();
-                            }
-                            catch(IOException e)
-                            {
-                                Log.e(LOG_TAG, "Couldn't close " + cacheFile, e);
-                            }
-                        }
-                    }
-                    return bitmap;
+                    return BitmapFactory.decodeFile(cacheFile.getAbsolutePath());
                 }
-                catch(IOException e) {
-                    Log.e(LOG_TAG, "Couldn't retrieve image content from url " + url, e);
-                    return null;
+                catch(Exception e)
+                {
+                    Log.e("CachedImageView", "Illegal icon cache?", e);
+                }
+            }
+
+            // ensure load once
+            final boolean loading;
+            synchronized(lock)
+            {
+                loading= loadingUris.contains(this.uri);
+                if(!loading)
+                {
+                    loadingUris.add(this.uri);
+                }
+            }
+            if(loading) {
+                while (loadingUris.contains(this.uri)) {
+                    Log.i(LOG_TAG, "Loading " + this.uri + ", wait it");
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        break;
+                    }
+                }
+                // expects it was cached
+                return this.doInBackground();
+            }
+
+            InputStream in= null;
+            try
+            {
+                in= url.openStream();
+                final Bitmap bitmap= BitmapFactory.decodeStream(in);
+                OutputStream out= null;
+                try
+                {
+                    out= new FileOutputStream(cacheFile);
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
+                }
+                catch(IOException e)
+                {
+                    Log.e(LOG_TAG, "Couldn't write cache image to " + cacheFile, e);
                 }
                 finally
                 {
-                    if(in != null)
+                    if(out != null)
                     {
                         try
                         {
-                            in.close();
+                            out.close();
                         }
-                        catch (IOException e) {
-                            Log.e(LOG_TAG, "Couldn't close stream of " + url, e);
+                        catch(IOException e)
+                        {
+                            Log.e(LOG_TAG, "Couldn't close " + cacheFile, e);
                         }
                     }
-                    synchronized(lock)
+                }
+                return bitmap;
+            }
+            catch(IOException e) {
+                Log.e(LOG_TAG, "Couldn't retrieve image content from url " + url, e);
+                return null;
+            }
+            finally
+            {
+                if(in != null)
+                {
+                    try
                     {
-                        loadingUris.remove(this.uri);
+                        in.close();
                     }
+                    catch (IOException e) {
+                        Log.e(LOG_TAG, "Couldn't close stream of " + url, e);
+                    }
+                }
+                synchronized(lock)
+                {
+                    loadingUris.remove(this.uri);
                 }
             }
         }

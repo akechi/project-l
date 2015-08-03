@@ -8,6 +8,8 @@ import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -19,16 +21,20 @@ import android.widget.Toast;
 
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.repackaged.com.google.common.base.Strings;
+import com.google.common.base.Supplier;
 
 import java.io.EOFException;
 import java.io.IOException;
 
+import akechi.projectl.async.LingrTaskLoader;
 import jp.michikusa.chitose.lingr.LingrClient;
 import jp.michikusa.chitose.lingr.LingrClientFactory;
+import jp.michikusa.chitose.lingr.LingrException;
+import jp.michikusa.chitose.lingr.Room;
 
 public class SayFragment
     extends Fragment
-    implements Button.OnClickListener, RoomListFragment.OnRoomSelectedListener
+    implements Button.OnClickListener, RoomListFragment.OnRoomSelectedListener, LoaderManager.LoaderCallbacks<Room.Message>
 {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
@@ -40,87 +46,81 @@ public class SayFragment
 
         this.sayButton.setOnClickListener(this);
 
+        this.getLoaderManager().initLoader(0, null, this);
+
         return v;
     }
 
     @Override
     public void onClick(View v)
     {
-        final SayFragment that= this;
-        final AccountManager manager= AccountManager.get(this.getActivity());
         this.sayButton.setEnabled(false);
-        new AsyncTask<String, Void, Boolean>(){
-            @Override
-            protected Boolean doInBackground(String... params) {
-                final String text= params[0];
-                final AppContext appContext= (AppContext)that.getActivity().getApplicationContext();
-                final Account account= appContext.getAccount();
-                if(account == null)
-                {
-                    return Boolean.FALSE;
-                }
-                final String roomId= appContext.getRoomId(account);
-                if(Strings.isNullOrEmpty(roomId))
-                {
-                    return Boolean.FALSE;
-                }
-                try
-                {
-                    boolean done= false;
-                    while(!done)
-                    {
-                        try
-                        {
-                            final LingrClient lingr= lingrFactory.newLingrClient();
-                            String authToken= manager.blockingGetAuthToken(account, "", true);
-                            if(!lingr.verifySession(authToken))
-                            {
-                                manager.invalidateAuthToken("com.lingr", authToken);
-                                authToken= manager.blockingGetAuthToken(account, "", true);
-                            }
-                            lingr.say(authToken, roomId, text);
-                            done= true;
-                        }
-                        catch(EOFException e)
-                        {
-                            // sleep and retry
-                            Thread.sleep(2000);
-                        }
-                    }
-                    return true;
-                }
-                catch (Exception e)
-                {
-                    Log.e("SayFragment", "Couldn't say message to " + roomId, e);
-                    this.message= e.toString();
-                    return false;
-                }
-            }
-
-            @Override
-            protected void onPostExecute(Boolean success) {
-                if(this.message != null)
-                {
-                    Toast.makeText(that.getActivity(), this.message, Toast.LENGTH_SHORT).show();
-                }
-                if(Boolean.TRUE.equals(success))
-                {
-                    that.inputText.setText("");
-                    // close keypad
-                    final InputMethodManager imeManager= (InputMethodManager)that.getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
-                    imeManager.hideSoftInputFromWindow(that.inputText.getWindowToken(), 0);
-                    that.sayButton.setEnabled(true);
-                    Toast.makeText(that.getActivity(), "Posted", Toast.LENGTH_SHORT).show();
-                }
-            }
-
-            private String message;
-        }.execute(this.inputText.getText().toString());
+        this.getLoaderManager().getLoader(0).forceLoad();
     }
 
     @Override
     public void onRoomSelected(CharSequence roomId)
     {
+    }
+
+    @Override
+    public Loader<Room.Message> onCreateLoader(int id, Bundle args)
+    {
+        return new MessagePostLoader(this.getActivity(), new Supplier<String>(){
+            @Override
+            public String get()
+            {
+                return inputText.getText().toString();
+            }
+        });
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Room.Message> loader, Room.Message data)
+    {
+        if(data == null)
+        {
+            return;
+        }
+        this.inputText.setText("");
+        // close keypad
+        final InputMethodManager imeManager= (InputMethodManager)this.getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
+        imeManager.hideSoftInputFromWindow(this.inputText.getWindowToken(), 0);
+        this.sayButton.setEnabled(true);
+        Toast.makeText(this.getActivity(), "Posted", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Room.Message> loader)
+    {
+    }
+
+    private static final class MessagePostLoader
+        extends LingrTaskLoader<Room.Message>
+    {
+        public MessagePostLoader(Context context, Supplier<String> textSupplier)
+        {
+            super(context);
+            this.textSupplier= textSupplier;
+        }
+
+        @Override
+        public Room.Message loadInBackground(CharSequence authToken, LingrClient lingr)
+            throws IOException, LingrException
+        {
+            final String text= this.textSupplier.get();
+            if(Strings.isNullOrEmpty(text))
+            {
+                return null;
+            }
+            final AppContext appContext= this.getApplicationContext();
+            final Account account= appContext.getAccount();
+            final String roomId= appContext.getRoomId(account);
+
+            return lingr.say(authToken, roomId, text);
+        }
+
+        private final Supplier<String> textSupplier;
     }
 
     private static final LingrClientFactory lingrFactory= LingrClientFactory.newLingrClientFactory(AndroidHttp.newCompatibleTransport());

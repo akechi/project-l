@@ -26,11 +26,14 @@ import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.common.collect.Lists;
 
 import java.io.EOFException;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
+import akechi.projectl.async.LingrTaskLoader;
 import jp.michikusa.chitose.lingr.LingrClient;
 import jp.michikusa.chitose.lingr.LingrClientFactory;
+import jp.michikusa.chitose.lingr.LingrException;
 
 public class RoomListFragment
     extends Fragment
@@ -116,12 +119,13 @@ public class RoomListFragment
     @Override
     public Loader<Iterable<String>> onCreateLoader(int id, final Bundle args)
     {
-        Log.i("RoomListFragment", String.format("onCreateLoader() with id=%d, args=%s", id, args));
         return new RoomListLoader(this.getActivity());
     }
 
     @Override
     public void onLoadFinished(Loader<Iterable<String>> loader, Iterable<String> data) {
+        this.swipeRefreshLayout.setRefreshing(false);
+
         final Iterable<String> loaded = (data != null) ? data : Collections.<String>emptyList();
         final List<String> roomIds= Lists.newArrayList();
         for(final String roomId : loaded)
@@ -134,7 +138,6 @@ public class RoomListFragment
                         roomIds.toArray(new String[0]))
         );
         Log.i("RoomListFragment", "Done for refreshing");
-        this.swipeRefreshLayout.setRefreshing(false);
     }
 
     @Override
@@ -146,13 +149,12 @@ public class RoomListFragment
 
     @Override
     public void onRefresh() {
-        // this.getLoaderManager().destroyLoader(0);
         Log.i("RoomListFragment", "On refresh, restart");
         this.getLoaderManager().getLoader(0).forceLoad();
     }
 
     private static final class RoomListLoader
-        extends AsyncTaskLoader<Iterable<String>>
+        extends LingrTaskLoader<Iterable<String>>
     {
         public RoomListLoader(Context context)
         {
@@ -160,53 +162,12 @@ public class RoomListFragment
         }
 
         @Override
-        public Iterable<String> loadInBackground()
+        public Iterable<String> loadInBackground(CharSequence authToken, LingrClient lingr)
+            throws IOException, LingrException
         {
-            final AppContext appCtx= (AppContext)this.getContext().getApplicationContext();
-            final Account account= appCtx.getAccount();
-            Log.i("RoomListFragment", "Start to load room list for " + account);
-            if(account == null)
-            {
-                return Collections.emptyList();
-            }
-            try
-            {
-                final AccountManager manager= AccountManager.get(this.getContext());
-                String authToken= manager.blockingGetAuthToken(account, "", true);
-                final LingrClient lingr= lingrFactory.newLingrClient();
-                if(!lingr.verifySession(authToken))
-                {
-                    Log.i("RoomListFragment", "authToken " + authToken + " is expired");
-                    manager.invalidateAuthToken("com.lingr", authToken);
-                    authToken= manager.blockingGetAuthToken(account, "", true);
-                }
-
-                Log.i("RoomListFragment", "call getRooms() with " + authToken);
-                return lingr.getRooms(authToken);
-            }
-            catch(EOFException e)
-            {
-                Log.e("RoomListFragment", "Couldn't get room list for " + account.name, e);
-                final Handler handler= new Handler(Looper.getMainLooper());
-                final Context ctx= this.getContext();
-                handler.post(new Runnable(){
-                    @Override
-                    public void run()
-                    {
-                        Toast.makeText(ctx, "Unexpectedly EOFException detected", Toast.LENGTH_LONG).show();
-                    }
-                });
-                return Collections.<String>emptyList();
-            }
-            catch(Exception e)
-            {
-                Log.e("RoomListFragment", "Couldn't get room list for " + account.name, e);
-                return Collections.<String>emptyList();
-            }
+            return lingr.getRooms(authToken);
         }
     }
-
-    private static final LingrClientFactory lingrFactory= LingrClientFactory.newLingrClientFactory(AndroidHttp.newCompatibleTransport());
 
     private SwipeRefreshLayout swipeRefreshLayout;
 
