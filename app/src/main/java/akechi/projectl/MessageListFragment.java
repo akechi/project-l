@@ -419,7 +419,7 @@ public class MessageListFragment
                 this.counter= lingr.subscribe(authToken, true, roomId);
             }
             Log.i("CometLoader", "observe " + roomId);
-            final Events events= lingr.observe(authToken, this.counter, 10, TimeUnit.SECONDS);
+            final Events events= lingr.observe(authToken, this.counter, 60, TimeUnit.SECONDS);
             Log.i("CometLoader", "stop observe " + roomId);
             this.counter= events.getCounter();
             final List<Message> messages= Lists.newLinkedList();
