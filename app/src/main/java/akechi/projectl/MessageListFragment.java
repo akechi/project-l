@@ -95,6 +95,21 @@ public class MessageListFragment
     }
 
     @Override
+    public void onStart()
+    {
+        super.onStart();
+
+        // reload when activity is visible
+        final AppContext appContext= (AppContext)this.getActivity().getApplicationContext();
+        final Account account= appContext.getAccount();
+        final String roomId= appContext.getRoomId(account);
+        if(!Strings.isNullOrEmpty(roomId))
+        {
+            this.onRoomSelected(roomId);
+        }
+    }
+
+    @Override
     public void onRoomSelected(CharSequence roomId)
     {
         Log.i("MessageListFragment", "On room selected " + roomId);
@@ -120,12 +135,13 @@ public class MessageListFragment
     @Override
     public void onLoadFinished(Loader<Iterable<Message>> loader, Iterable<Message> data)
     {
-        if(loader.getId() != LOADER_COMET)
-        {
-            this.swipeRefreshLayout.setRefreshing(false);
-        }
         if(data == null)
         {
+            return;
+        }
+        if(Iterables.isEmpty(data))
+        {
+            this.swipeRefreshLayout.setRefreshing(false);
             return;
         }
         Log.i("MessageListFragment", String.format("got %d messages", Iterables.size(data)));
@@ -139,6 +155,7 @@ public class MessageListFragment
                 }
                 ((MessageAdapter)this.messageView.getAdapter()).notifyDataSetChanged();
                 this.messageView.setSelection(this.messageView.getAdapter().getCount() - 1);
+                this.swipeRefreshLayout.setRefreshing(false);
                 break;
             }
             case LOADER_GET_ARCHIVE:{
@@ -146,6 +163,7 @@ public class MessageListFragment
                 adapter.insertHead(Lists.newArrayList(data));
                 adapter.notifyDataSetChanged();
                 this.messageView.setSelection(Iterables.size(data));
+                this.swipeRefreshLayout.setRefreshing(false);
                 break;
             }
             case LOADER_COMET:{
