@@ -301,7 +301,7 @@ public class MessageListFragment
             final TextView timestampView= (TextView)view.findViewById(R.id.timestampView);
             {
                 final Date timestamp= new Date(new DateTime(data.getTimestamp()).getValue());
-                timestampView.setText(new SimpleDateFormat("yyyy-MM-dd (E) HH:mm:ss.SSS").format(timestamp));
+                timestampView.setText(DateFormat.getDateTimeInstance().format(timestamp));
             }
 
             final TextView textView= (TextView)view.findViewById(R.id.textView);
