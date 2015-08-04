@@ -60,13 +60,13 @@ public abstract class LingrTaskLoader<R>
                     Thread.sleep(this.getWaitTimeMillis(nretries++));
                 }
             }
-            this.showMessage("Sorry, couldn't finish the task");
+            this.showMessage("Giving up");
             return null;
         }
         catch(Exception e)
         {
             Log.e("LingrTaskLoader", "Loading failed", e);
-            this.showMessage("Loading failed");
+            this.showMessage("Oh, my god");
             return null;
         }
     }
