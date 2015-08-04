@@ -135,44 +135,49 @@ public class MessageListFragment
     @Override
     public void onLoadFinished(Loader<Iterable<Message>> loader, Iterable<Message> data)
     {
-        if(data == null)
-        {
-            return;
-        }
-        if(Iterables.isEmpty(data))
-        {
-            this.swipeRefreshLayout.setRefreshing(false);
-            return;
-        }
-        Log.i("MessageListFragment", String.format("got %d messages", Iterables.size(data)));
         switch(loader.getId())
         {
             case LOADER_SHOW_ROOM:{
-                final MessageAdapter adapter= (MessageAdapter)this.messageView.getAdapter();
-                for(final Message m : data)
+                if(data != null && !Iterables.isEmpty(data))
                 {
-                    adapter.add(m);
+                    final MessageAdapter adapter= (MessageAdapter)this.messageView.getAdapter();
+                    for(final Message m : data)
+                    {
+                        adapter.add(m);
+                    }
+                    ((MessageAdapter)this.messageView.getAdapter()).notifyDataSetChanged();
+                    this.messageView.setSelection(this.messageView.getAdapter().getCount() - 1);
                 }
-                ((MessageAdapter)this.messageView.getAdapter()).notifyDataSetChanged();
-                this.messageView.setSelection(this.messageView.getAdapter().getCount() - 1);
                 this.swipeRefreshLayout.setRefreshing(false);
                 break;
             }
             case LOADER_GET_ARCHIVE:{
-                final MessageAdapter adapter= (MessageAdapter)this.messageView.getAdapter();
-                adapter.insertHead(Lists.newArrayList(data));
-                adapter.notifyDataSetChanged();
-                this.messageView.setSelection(Iterables.size(data));
+                if(data != null && !Iterables.isEmpty(data))
+                {
+                    final MessageAdapter adapter= (MessageAdapter)this.messageView.getAdapter();
+                    adapter.insertHead(Lists.newArrayList(data));
+                    adapter.notifyDataSetChanged();
+                    this.messageView.setSelection(Iterables.size(data));
+                }
                 this.swipeRefreshLayout.setRefreshing(false);
                 break;
             }
             case LOADER_COMET:{
-                final MessageAdapter adapter= (MessageAdapter)this.messageView.getAdapter();
-                for(final Message message : data)
+                if(data != null && !Iterables.isEmpty(data))
                 {
-                    adapter.add(message);
+                    // follow selection when last message is visible
+                    boolean follow= (this.messageView.getCount() - 1) == this.messageView.getLastVisiblePosition();
+                    final MessageAdapter adapter= (MessageAdapter)this.messageView.getAdapter();
+                    for(final Message message : data)
+                    {
+                        adapter.add(message);
+                    }
+                    adapter.notifyDataSetChanged();
+                    if(follow)
+                    {
+                        this.messageView.smoothScrollByOffset(this.messageView.getCount() - 1);
+                    }
                 }
-                adapter.notifyDataSetChanged();
                 loader.forceLoad();
                 break;
             }
