@@ -16,6 +16,7 @@ import android.support.v4.view.ViewPager;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.KeyEvent;
 
 import com.google.api.client.repackaged.com.google.common.base.Strings;
 import com.google.common.collect.Maps;
@@ -92,6 +93,26 @@ public class HomeActivity
 
         final Intent service= new Intent(this, CometService.class);
         this.startService(service);
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event)
+    {
+        switch(keyCode)
+        {
+            // swipe to room list when back button press in the room
+            case KeyEvent.KEYCODE_BACK:{
+                final ViewPager pager= (ViewPager)this.findViewById(R.id.pager);
+                if(pager.getCurrentItem() == SwipeSwitcher.POS_ROOM)
+                {
+                    pager.setCurrentItem(SwipeSwitcher.POS_ROOM_LIST, true);
+                    return true;
+                }
+                // fallthrough
+            }
+            default:
+                return super.onKeyDown(keyCode, event);
+        }
     }
 
     @Override
