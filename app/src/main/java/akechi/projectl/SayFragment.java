@@ -54,6 +54,7 @@ public class SayFragment
     @Override
     public void onClick(View v)
     {
+        Log.i("SayFragment", "input area and say button are disabled");
         this.sayButton.setEnabled(false);
         this.inputText.setEnabled(false);
         this.getLoaderManager().getLoader(0).forceLoad();
@@ -62,6 +63,9 @@ public class SayFragment
     @Override
     public void onRoomSelected(CharSequence roomId)
     {
+        Log.i("SayFragment", "input area and say button are enabled");
+        this.sayButton.setEnabled(true);
+        this.inputText.setEnabled(true);
     }
 
     @Override
@@ -79,17 +83,24 @@ public class SayFragment
     @Override
     public void onLoadFinished(Loader<Room.Message> loader, Room.Message data)
     {
-        if(data == null)
+        try
         {
-            return;
+            if(data == null)
+            {
+                return;
+            }
+            this.inputText.setText("");
+            // close keypad
+            final InputMethodManager imeManager= (InputMethodManager)this.getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
+            imeManager.hideSoftInputFromWindow(this.inputText.getWindowToken(), 0);
+            Toast.makeText(this.getActivity(), "Posted", Toast.LENGTH_SHORT).show();
         }
-        this.inputText.setText("");
-        // close keypad
-        final InputMethodManager imeManager= (InputMethodManager)this.getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
-        imeManager.hideSoftInputFromWindow(this.inputText.getWindowToken(), 0);
-        this.sayButton.setEnabled(true);
-        this.inputText.setEnabled(true);
-        Toast.makeText(this.getActivity(), "Posted", Toast.LENGTH_SHORT).show();
+        finally
+        {
+            Log.i("SayFragment", "input area and say button are enabled");
+            this.sayButton.setEnabled(true);
+            this.inputText.setEnabled(true);
+        }
     }
 
     @Override
@@ -111,6 +122,7 @@ public class SayFragment
             throws IOException, LingrException
         {
             final String text= this.textSupplier.get();
+            Log.i("SayFragment", "loadInBackground(), text = " + text);
             if(Strings.isNullOrEmpty(text))
             {
                 return null;
