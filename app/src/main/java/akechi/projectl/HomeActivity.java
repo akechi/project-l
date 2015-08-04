@@ -2,9 +2,13 @@ package akechi.projectl;
 
 import android.accounts.Account;
 import android.accounts.AccountManager;
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentStatePagerAdapter;
@@ -18,9 +22,11 @@ import com.google.common.collect.Maps;
 
 import java.util.Map;
 
+import jp.michikusa.chitose.lingr.Events;
+
 public class HomeActivity
     extends AppCompatActivity
-    implements RoomListFragment.OnRoomSelectedListener, AccountListFragment.OnAccountSelectedListener
+    implements RoomListFragment.OnRoomSelectedListener, AccountListFragment.OnAccountSelectedListener, CometService.OnCometEventListener
 {
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -79,6 +85,9 @@ public class HomeActivity
         bar.setDisplayShowCustomEnabled(true);
         bar.setDisplayUseLogoEnabled(true);
         bar.setLogo(R.drawable.icon_logo);
+
+        final Intent service= new Intent(this, CometService.class);
+        this.startService(service);
     }
 
     @Override
@@ -109,6 +118,9 @@ public class HomeActivity
         }
 
         editor.commit();
+
+        // this.unbindService(this.serviceConnection);
+        // this.serviceConnection= null;
     }
 
     /* @Override */
@@ -162,6 +174,25 @@ public class HomeActivity
         final SwipeSwitcher adapter= (SwipeSwitcher)pager.getAdapter();
         final Fragment fragment= adapter.getFragment(SwipeSwitcher.POS_ROOM);
         ((RoomListFragment.OnRoomSelectedListener)fragment).onRoomSelected(roomId);
+    }
+
+    @Override
+    public void onCometEvent(Events events)
+    {
+        final ViewPager pager= (ViewPager)this.findViewById(R.id.pager);
+        final SwipeSwitcher adapter= (SwipeSwitcher)pager.getAdapter();
+        final Fragment[] fragments= new Fragment[]{
+                adapter.getFragment(SwipeSwitcher.POS_ROOM_LIST),
+                adapter.getFragment(SwipeSwitcher.POS_ROOM),
+                adapter.getFragment(SwipeSwitcher.POS_ACCOUNT_LIST),
+        };
+        for(final Fragment fragment : fragments)
+        {
+            if(fragment instanceof CometService.OnCometEventListener)
+            {
+                ((CometService.OnCometEventListener)fragment).onCometEvent(events);
+            }
+        }
     }
 
     public static final class SwipeSwitcher
@@ -224,5 +255,23 @@ public class HomeActivity
 
         private final Map<Integer, Fragment> fragments= Maps.newHashMap();
     }
+
+    private static final class CometServiceConnection
+        implements ServiceConnection
+    {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service)
+        {
+            Log.i("CometServiceConnection", "onServiceConnected()");
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name)
+        {
+            Log.i("CometServiceConnection", "onServiceDisconnected()");
+        }
+    }
+
+    private ServiceConnection serviceConnection;
 }
 

@@ -40,5 +40,6 @@
                 android:resource="@xml/authenticator"
                 />
         </service>
+        <service android:name=".CometService" />
     </application>
 </manifest>

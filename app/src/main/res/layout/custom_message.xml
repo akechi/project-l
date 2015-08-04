@@ -6,32 +6,48 @@
     <LinearLayout
         android:orientation="horizontal"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        >
+        android:layout_height="wrap_content">
         <akechi.projectl.component.CachedImageView
             android:layout_width="48dp"
             android:layout_height="match_parent"
             android:id="@+id/iconView"
-            android:layout_gravity="top"
             android:maxWidth="48dp"
             android:minHeight="48dp"
             android:minWidth="48dp"
-            />
+            android:padding="3dp" />
         <LinearLayout
             android:orientation="vertical"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             >
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/nicknameView"
-                />
+
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/nicknameView"
+                    android:gravity="left" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/timestampView"
+                    android:gravity="right"
+                    android:singleLine="true"
+                    android:layout_gravity="right" />
+
+            </LinearLayout>
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:id="@+id/textView"
                 />
+
         </LinearLayout>
     </LinearLayout>
 </FrameLayout>
