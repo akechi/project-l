@@ -57,7 +57,10 @@ public abstract class LingrTaskLoader<R>
                 catch(EOFException e)
                 {
                     // android's bug, ignore and retry
-                    Thread.sleep(this.getWaitTimeMillis(nretries++));
+                    final long waitTimeMillis= this.getWaitTimeMillis(nretries++);
+                    final float waitTimeSeconds= (waitTimeMillis / 1000) + (waitTimeMillis % 1000 * 0.001f);
+                    this.showMessage(String.format("Retry after %.2f seconds", waitTimeSeconds));
+                    Thread.sleep(waitTimeMillis);
                 }
             }
             this.showMessage("Giving up");
@@ -95,7 +98,7 @@ public abstract class LingrTaskLoader<R>
 
     private long getWaitTimeMillis(int nretries)
     {
-        return (long)Math.pow(2, nretries) * 100L;
+        return (long)Math.pow(2, nretries) * 500L;
     }
 
     private static final int MAX_NRETRIES= 5;
