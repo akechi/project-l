@@ -71,7 +71,7 @@ public class HomeActivity
         {
             pager.setCurrentItem(SwipeSwitcher.POS_ACCOUNT_LIST);
         }
-        else if(appContext.getRoomId(account) != null)
+        else if(!Strings.isNullOrEmpty(appContext.getRoomId(account)))
         {
             pager.setCurrentItem(SwipeSwitcher.POS_ROOM);
         }
@@ -85,6 +85,10 @@ public class HomeActivity
         bar.setDisplayShowCustomEnabled(true);
         bar.setDisplayUseLogoEnabled(true);
         bar.setLogo(R.drawable.icon_logo);
+        if(account != null)
+        {
+            bar.setTitle(String.format("%s - %s", this.getString(R.string.app_name), account.name));
+        }
 
         final Intent service= new Intent(this, CometService.class);
         this.startService(service);
@@ -160,6 +164,8 @@ public class HomeActivity
                 ((AccountListFragment.OnAccountSelectedListener)fragment).onAccountSelected(account);
             }
         }
+
+        this.getSupportActionBar().setTitle(String.format("%s - %s", this.getString(R.string.app_name), account.name));
     }
 
     @Override
