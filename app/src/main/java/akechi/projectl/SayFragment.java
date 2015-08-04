@@ -55,6 +55,7 @@ public class SayFragment
     public void onClick(View v)
     {
         this.sayButton.setEnabled(false);
+        this.inputText.setEnabled(false);
         this.getLoaderManager().getLoader(0).forceLoad();
     }
 
@@ -87,6 +88,7 @@ public class SayFragment
         final InputMethodManager imeManager= (InputMethodManager)this.getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
         imeManager.hideSoftInputFromWindow(this.inputText.getWindowToken(), 0);
         this.sayButton.setEnabled(true);
+        this.inputText.setEnabled(true);
         Toast.makeText(this.getActivity(), "Posted", Toast.LENGTH_SHORT).show();
     }
 
