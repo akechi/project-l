@@ -2,6 +2,8 @@ package akechi.projectl;
 
 import android.accounts.Account;
 import android.accounts.AccountManager;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -14,9 +16,13 @@ import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.util.Log;
+import android.view.ContextMenu;
 import android.view.LayoutInflater;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.ListView;
@@ -88,6 +94,7 @@ public class MessageListFragment
 
         this.swipeRefreshLayout.setOnRefreshListener(this);
         this.messageView.setAdapter(new MessageAdapter(this.getActivity(), Collections.<Message>emptyList()));
+        this.registerForContextMenu(this.messageView);
 
         return view;
     }
@@ -117,6 +124,43 @@ public class MessageListFragment
 
         this.swipeRefreshLayout.setRefreshing(true);
         this.getLoaderManager().getLoader(LOADER_SHOW_ROOM).forceLoad();
+    }
+
+    @Override
+    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo)
+    {
+        super.onCreateContextMenu(menu, v, menuInfo);
+
+        final MenuInflater inflator= this.getActivity().getMenuInflater();
+        inflator.inflate(R.menu.fragment_message_list_menu, menu);
+    }
+
+    @Override
+    public boolean onContextItemSelected(MenuItem item)
+    {
+        super.onContextItemSelected(item);
+
+        switch(item.getItemId())
+        {
+            case R.id.menu_item_copy:{
+                final ClipboardManager clipMan= (ClipboardManager)this.getActivity().getSystemService(Context.CLIPBOARD_SERVICE);
+                final int pos= ((ListView.AdapterContextMenuInfo)item.getMenuInfo()).position;
+                final Message message= (Message)this.messageView.getAdapter().getItem(pos);
+                clipMan.setPrimaryClip(ClipData.newPlainText("Lingr Message Text", message.getText()));
+
+                Toast.makeText(this.getActivity(), "Copied text to clipboard", Toast.LENGTH_SHORT).show();
+                break;
+            }
+            case R.id.menu_item_reply:{
+                Toast.makeText(this.getActivity(), "Cannot use yet", Toast.LENGTH_SHORT).show();
+                break;
+            }
+            case R.id.menu_item_share:{
+                Toast.makeText(this.getActivity(), "Cannot use yet", Toast.LENGTH_SHORT).show();
+                break;
+            }
+        }
+        return false;
     }
 
     @Override
