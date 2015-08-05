@@ -2,9 +2,11 @@ package akechi.projectl;
 
 import android.accounts.Account;
 import android.accounts.AccountManager;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -91,6 +93,19 @@ public class HomeActivity
             bar.setTitle(String.format("%s - %s", this.getString(R.string.app_name), account.name));
         }
 
+        {
+            final IntentFilter ifilter= new IntentFilter(CometService.class.getCanonicalName());
+            this.receiver= new BroadcastReceiver(){
+                @Override
+                public void onReceive(Context context, Intent intent)
+                {
+                    final Events events= (Events)intent.getSerializableExtra("events");
+                    HomeActivity.this.onCometEvent(events);
+                }
+            };
+            this.registerReceiver(this.receiver, ifilter);
+        }
+
         final Intent service= new Intent(this, CometService.class);
         this.startService(service);
     }
@@ -146,6 +161,15 @@ public class HomeActivity
 
         // this.unbindService(this.serviceConnection);
         // this.serviceConnection= null;
+    }
+
+    @Override
+    protected void onDestroy()
+    {
+        super.onDestroy();
+
+        this.unregisterReceiver(this.receiver);
+        this.receiver= null;
     }
 
     /* @Override */
@@ -206,6 +230,7 @@ public class HomeActivity
     @Override
     public void onCometEvent(Events events)
     {
+        Log.i("HomeActivity", "events = " + events);
         final ViewPager pager= (ViewPager)this.findViewById(R.id.pager);
         final SwipeSwitcher adapter= (SwipeSwitcher)pager.getAdapter();
         final Fragment[] fragments= new Fragment[]{
@@ -283,22 +308,6 @@ public class HomeActivity
         private final Map<Integer, Fragment> fragments= Maps.newHashMap();
     }
 
-    private static final class CometServiceConnection
-        implements ServiceConnection
-    {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service)
-        {
-            Log.i("CometServiceConnection", "onServiceConnected()");
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name)
-        {
-            Log.i("CometServiceConnection", "onServiceDisconnected()");
-        }
-    }
-
-    private ServiceConnection serviceConnection;
+    private BroadcastReceiver receiver;
 }
 

@@ -6,11 +6,12 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import jp.michikusa.chitose.lingr.Events;
 import jp.michikusa.chitose.lingr.Room;
 
 public class RoomFragment
     extends Fragment
-    implements RoomListFragment.OnRoomSelectedListener
+    implements RoomListFragment.OnRoomSelectedListener, CometService.OnCometEventListener
 {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -27,6 +28,18 @@ public class RoomFragment
     {
         this.messageListFragment.onRoomSelected(roomId);
         this.sayFragment.onRoomSelected(roomId);
+    }
+
+    @Override
+    public void onCometEvent(Events events)
+    {
+        for(final Fragment fragment : new Fragment[]{this.messageListFragment, this.sayFragment})
+        {
+            if(fragment instanceof CometService.OnCometEventListener)
+            {
+                ((CometService.OnCometEventListener)fragment).onCometEvent(events);
+            }
+        }
     }
 
     private MessageListFragment messageListFragment;

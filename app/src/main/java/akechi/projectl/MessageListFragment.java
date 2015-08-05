@@ -65,7 +65,6 @@ public class MessageListFragment
 
         this.getLoaderManager().initLoader(LOADER_SHOW_ROOM, null, this);
         this.getLoaderManager().initLoader(LOADER_GET_ARCHIVE, null, this);
-        this.getLoaderManager().initLoader(LOADER_COMET, null, this);
 
         final AppContext appContext= (AppContext)this.getActivity().getApplicationContext();
         final Account account= appContext.getAccount();
@@ -75,7 +74,6 @@ public class MessageListFragment
             if(!Strings.isNullOrEmpty(roomId))
             {
                 this.getLoaderManager().getLoader(LOADER_SHOW_ROOM).forceLoad();
-                this.getLoaderManager().getLoader(LOADER_COMET).forceLoad();
             }
         }
     }
@@ -119,11 +117,6 @@ public class MessageListFragment
 
         this.swipeRefreshLayout.setRefreshing(true);
         this.getLoaderManager().getLoader(LOADER_SHOW_ROOM).forceLoad();
-        {
-            final Loader<?> loader= this.getLoaderManager().getLoader(LOADER_COMET);
-            ((NewerMessageLoader)loader).counter= -1;
-            loader.forceLoad();
-        }
     }
 
     @Override
@@ -162,25 +155,6 @@ public class MessageListFragment
                 this.swipeRefreshLayout.setRefreshing(false);
                 break;
             }
-            case LOADER_COMET:{
-                if(data != null && !Iterables.isEmpty(data))
-                {
-                    // follow selection when last message is visible
-                    boolean follow= (this.messageView.getCount() - 1) == this.messageView.getLastVisiblePosition();
-                    final MessageAdapter adapter= (MessageAdapter)this.messageView.getAdapter();
-                    for(final Message message : data)
-                    {
-                        adapter.add(message);
-                    }
-                    adapter.notifyDataSetChanged();
-                    if(follow)
-                    {
-                        this.messageView.smoothScrollByOffset(this.messageView.getCount() - 1);
-                    }
-                }
-                loader.forceLoad();
-                break;
-            }
             default:
                 throw new AssertionError("Unknown loader id: " + loader.getId());
         }
@@ -205,8 +179,6 @@ public class MessageListFragment
                         return (Message)messageView.getAdapter().getItem(0);
                     }
                 });
-            case LOADER_COMET:
-                return new NewerMessageLoader(this.getActivity());
             default:
                 throw new AssertionError("Unknown loader id: " + id);
         }
@@ -221,22 +193,33 @@ public class MessageListFragment
     @Override
     public void onCometEvent(Events events)
     {
+        Log.i("MessageListFragment", "events = " + events);
         final List<Message> messages= Lists.newLinkedList();
+        final AppContext appContext= (AppContext)this.getActivity().getApplicationContext();
+        final Account account= appContext.getAccount();
+        final String roomId= appContext.getRoomId(account);
         for(final Events.Event event : events.getEvents())
         {
-            if(event.getMessage() != null)
+            Log.i("onCometEvent", "message = " + event.getMessage());
+            if(event.getMessage() != null && event.getMessage().getRoom().equals(roomId))
             {
                 messages.add(event.getMessage());
             }
         }
         if(!messages.isEmpty())
         {
+            // follow selection when last message is visible
+            boolean follow= (this.messageView.getCount() - 1) == this.messageView.getLastVisiblePosition();
             final MessageAdapter adapter= (MessageAdapter)this.messageView.getAdapter();
             for(final Message message : messages)
             {
                 adapter.add(message);
             }
             adapter.notifyDataSetChanged();
+            if(follow)
+            {
+                this.messageView.smoothScrollByOffset(this.messageView.getCount() - 1);
+            }
         }
     }
 
@@ -341,10 +324,9 @@ public class MessageListFragment
             }
 
             final Room room= lingr.showRoom(authToken, roomId);
-            final Room.RoomInfo info= Iterables.find(room.getRooms(), new Predicate<Room.RoomInfo>(){
+            final Room.RoomInfo info= Iterables.find(room.getRooms(), new Predicate<Room.RoomInfo>() {
                 @Override
-                public boolean apply(Room.RoomInfo input)
-                {
+                public boolean apply(Room.RoomInfo input) {
                     return roomId.equals(input.getId());
                 }
             });
@@ -385,60 +367,8 @@ public class MessageListFragment
         private final Supplier<Message> oldestMessageSupplier;
     }
 
-    private static final class NewerMessageLoader
-        extends LingrTaskLoader<Iterable<Message>>
-    {
-        public NewerMessageLoader(Context context)
-        {
-            super(context);
-        }
-
-        @Override
-        public Iterable<Message> loadInBackground(CharSequence authToken, LingrClient lingr)
-            throws IOException, LingrException
-        {
-            final AppContext appContext= this.getApplicationContext();
-            final Account account= appContext.getAccount();
-            while(Strings.isNullOrEmpty(appContext.getRoomId(account)))
-            {
-                try
-                {
-                    Thread.sleep(TimeUnit.SECONDS.toMillis(1));
-                }
-                catch(InterruptedException e)
-                {
-                    return Collections.emptyList();
-                }
-            }
-            final String roomId= appContext.getRoomId(account);
-
-            // first
-            if(this.counter < 0)
-            {
-                Log.i("CometLoader", "subscribe " + roomId);
-                this.counter= lingr.subscribe(authToken, true, roomId);
-            }
-            Log.i("CometLoader", "observe " + roomId);
-            final Events events= lingr.observe(authToken, this.counter, 60, TimeUnit.SECONDS);
-            Log.i("CometLoader", "stop observe " + roomId);
-            this.counter= events.getCounter();
-            final List<Message> messages= Lists.newLinkedList();
-            for(final Events.Event event : events.getEvents())
-            {
-                if(event.getMessage() != null)
-                {
-                    messages.add(event.getMessage());
-                }
-            }
-            return messages;
-        }
-
-        private long counter= -1;
-    }
-
     private static final int LOADER_SHOW_ROOM= 0;
     private static final int LOADER_GET_ARCHIVE= 1;
-    private static final int LOADER_COMET= 2;
 
     private SwipeRefreshLayout swipeRefreshLayout;
 
