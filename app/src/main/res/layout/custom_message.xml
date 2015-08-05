@@ -55,6 +55,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:id="@+id/textView"
+                android:autoLink="web"
                 android:textColor="@android:color/black" />
 
         </LinearLayout>
