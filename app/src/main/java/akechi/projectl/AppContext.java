@@ -14,6 +14,8 @@ import com.google.api.client.repackaged.com.google.common.base.Strings;
 import jp.michikusa.chitose.lingr.LingrClient;
 import jp.michikusa.chitose.lingr.LingrClientFactory;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 public class AppContext
     extends Application
 {
@@ -48,18 +50,25 @@ public class AppContext
 
     public void setAccount(Account account)
     {
-        Log.i("AppContext", "setAccount() with " + account.name);
+        checkNotNull(account, "account is null");
+
         this.accountName= account.name;
     }
 
     public String getRoomId(Account account)
     {
+        if(account == null)
+        {
+            return null;
+        }
         final AccountManager manager= AccountManager.get(this);
         return manager.getUserData(account, "roomId");
     }
 
     public void setRoomId(Account account, CharSequence roomId)
     {
+        checkNotNull(account, "account is null");
+
         final AccountManager manager= AccountManager.get(this);
         manager.setUserData(account, "roomId", roomId.toString());
     }
