@@ -168,8 +168,11 @@ public class HomeActivity
     {
         super.onDestroy();
 
-        this.unregisterReceiver(this.receiver);
-        this.receiver= null;
+        if(this.receiver != null)
+        {
+            this.unregisterReceiver(this.receiver);
+            this.receiver= null;
+        }
     }
 
     /* @Override */

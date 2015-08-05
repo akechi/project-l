@@ -1,10 +1,12 @@
 package akechi.projectl.authenticator;
 
+import akechi.projectl.HomeActivity;
 import akechi.projectl.R;
 
 import android.accounts.Account;
 import android.accounts.AccountAuthenticatorActivity;
 import android.accounts.AccountManager;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -69,7 +71,7 @@ public class LingrAuthenticatorActivity
                 }
                 catch(Exception e)
                 {
-                    Log.e("LingrAuthenticatorActivity", "Couldn't create session", e);
+                    Log.e("LingrAuthActivity", "Couldn't create session", e);
                     return null;
                 }
             }
@@ -91,6 +93,11 @@ public class LingrAuthenticatorActivity
                 manager.addAccountExplicitly(account, password, data);
                 manager.setAuthToken(account, "", authToken);
                 Toast.makeText(that, "Account successfuly added", Toast.LENGTH_SHORT).show();
+
+                {
+                    final Intent intent= new Intent(that, HomeActivity.class);
+                    that.startActivity(intent);
+                }
 
                 that.finish();
             }
