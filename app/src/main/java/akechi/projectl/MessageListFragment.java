@@ -100,21 +100,6 @@ public class MessageListFragment
     }
 
     @Override
-    public void onStart()
-    {
-        super.onStart();
-
-        // reload when activity is visible
-        final AppContext appContext= (AppContext)this.getActivity().getApplicationContext();
-        final Account account= appContext.getAccount();
-        final String roomId= appContext.getRoomId(account);
-        if(!Strings.isNullOrEmpty(roomId))
-        {
-            this.onRoomSelected(roomId);
-        }
-    }
-
-    @Override
     public void onRoomSelected(CharSequence roomId)
     {
         Log.i("MessageListFragment", "On room selected " + roomId);
