@@ -22,11 +22,7 @@ public class AppContext
     public Account getAccount()
     {
         final String name= this.accountName;
-        if(Strings.isNullOrEmpty(name))
-        {
-            Log.i("AppContext", "account not yet selected");
-            return null;
-        }
+        final boolean autoselect= Strings.isNullOrEmpty(name);
 
         final AccountManager manager= AccountManager.get(this);
         final Account[] accounts= manager.getAccountsByType("com.lingr");
@@ -35,10 +31,14 @@ public class AppContext
             Log.i("AppContext", "no accounts");
             return null;
         }
+        if(autoselect && accounts.length == 1)
+        {
+            return accounts[0];
+        }
 
         for(final Account account : accounts)
         {
-            if(name.equals(account.name))
+            if(account.name.equals(name))
             {
                 Log.i("AppContext", "Found account " + name);
                 return account;
