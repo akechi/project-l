@@ -8,11 +8,26 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         >
-        <android.support.v4.view.ViewPager
-            android:id="@+id/pager"
-            android:layout_width="fill_parent"
-            android:layout_height="fill_parent"
-            >
-        </android.support.v4.view.ViewPager>
+
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                android:id="@+id/whenceView"
+                android:gravity="end" />
+
+            <android.support.v4.view.ViewPager
+                android:id="@+id/pager"
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"
+                >
+            </android.support.v4.view.ViewPager>
+
+        </LinearLayout>
     </FrameLayout>
 </RelativeLayout>

@@ -11,7 +11,7 @@ import jp.michikusa.chitose.lingr.Room;
 
 public class RoomFragment
     extends Fragment
-    implements RoomListFragment.OnRoomSelectedListener, CometService.OnCometEventListener
+    implements CometService.OnCometEventListener
 {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -21,13 +21,6 @@ public class RoomFragment
         this.sayFragment= (SayFragment)this.getChildFragmentManager().findFragmentByTag("say");
 
         return v;
-    }
-
-    @Override
-    public void onRoomSelected(CharSequence roomId)
-    {
-        this.messageListFragment.onRoomSelected(roomId);
-        this.sayFragment.onRoomSelected(roomId);
     }
 
     @Override

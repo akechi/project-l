@@ -38,7 +38,7 @@ public class CometService
     @Override
     public IBinder onBind(Intent intent)
     {
-        return new CometBinder();
+        throw new AssertionError("Cannot bind this service");
     }
 
     @Override
@@ -95,15 +95,6 @@ public class CometService
         final AlarmManager alarmMan= (AlarmManager)this.getSystemService(ALARM_SERVICE);
         // re-invoke myself every 500ms
         alarmMan.set(AlarmManager.RTC, System.currentTimeMillis() + 500, intent);
-    }
-
-    private final class CometBinder
-        extends Binder
-    {
-        public CometService getService()
-        {
-            return CometService.this;
-        }
     }
 
     private class SubscribeLoader

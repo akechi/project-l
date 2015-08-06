@@ -3,7 +3,10 @@ package akechi.projectl;
 import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.app.Activity;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -37,20 +40,8 @@ import jp.michikusa.chitose.lingr.LingrException;
 
 public class RoomListFragment
     extends Fragment
-    implements ListView.OnItemClickListener, LoaderManager.LoaderCallbacks<Iterable<String>>, SwipeRefreshLayout.OnRefreshListener, AccountListFragment.OnAccountSelectedListener
+    implements ListView.OnItemClickListener, LoaderManager.LoaderCallbacks<Iterable<String>>, SwipeRefreshLayout.OnRefreshListener
 {
-    public static interface OnRoomSelectedListener
-    {
-        void onRoomSelected(CharSequence roomId);
-    }
-
-    @Override
-    public void onAccountSelected(Account account)
-    {
-        this.swipeRefreshLayout.setRefreshing(true);
-        this.onRefresh();
-    }
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -61,6 +52,32 @@ public class RoomListFragment
         {
             this.getLoaderManager().getLoader(0).forceLoad();
         }
+
+        {
+            final IntentFilter ifilter= new IntentFilter(Event.AccountChange.ACTION);
+            final BroadcastReceiver receiver= new BroadcastReceiver(){
+                @Override
+                public void onReceive(Context context, Intent intent)
+                {
+                    RoomListFragment.this.swipeRefreshLayout.setRefreshing(true);
+                    RoomListFragment.this.onRefresh();
+                }
+            };
+            this.getActivity().registerReceiver(receiver, ifilter);
+            this.receivers.add(receiver);
+        }
+    }
+
+    @Override
+    public void onDestroy()
+    {
+        super.onDestroy();
+
+        for(final BroadcastReceiver receiver : this.receivers)
+        {
+            this.getActivity().unregisterReceiver(receiver);
+        }
+        this.receivers.clear();
     }
 
     @Override
@@ -82,38 +99,12 @@ public class RoomListFragment
     }
 
     @Override
-    public void onAttach(Activity activity) {
-        super.onAttach(activity);
-
-        if(activity instanceof OnRoomSelectedListener)
-        {
-            this.listeners.add((OnRoomSelectedListener)activity);
-        }
-    }
-
-    @Override
-    public void onDetach() {
-        super.onDetach();
-
-        this.listeners.clear();
-    }
-
-    @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-        final Iterable<OnRoomSelectedListener> listeners = Lists.newArrayList(this.listeners);
         final CharSequence roomId= (CharSequence) this.listView.getAdapter().getItem(position);
 
-        for(final OnRoomSelectedListener listener : listeners)
-        {
-            try
-            {
-                listener.onRoomSelected(roomId.toString());
-            }
-            catch(Exception e)
-            {
-                Log.e("RoomListFragment", "Couldn't call a listener", e);
-            }
-        }
+        final Intent intent= new Intent(Event.RoomChange.ACTION);
+        intent.putExtra(Event.RoomChange.KEY_ROOM_ID, roomId.toString());
+        this.getActivity().sendBroadcast(intent);
     }
 
     @Override
@@ -173,5 +164,5 @@ public class RoomListFragment
 
     private ListView listView;
 
-    private List<OnRoomSelectedListener> listeners= Lists.newArrayList();
+    private final List<BroadcastReceiver> receivers= Lists.newLinkedList();
 }

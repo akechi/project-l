@@ -19,17 +19,21 @@ import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.widget.TextView;
 
 import com.google.api.client.repackaged.com.google.common.base.Strings;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
+import java.util.List;
 import java.util.Map;
 
 import jp.michikusa.chitose.lingr.Events;
 
 public class HomeActivity
     extends AppCompatActivity
-    implements RoomListFragment.OnRoomSelectedListener, AccountListFragment.OnAccountSelectedListener, CometService.OnCometEventListener
+    implements CometService.OnCometEventListener, ViewPager.OnPageChangeListener
 {
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -69,6 +73,7 @@ public class HomeActivity
         final Account account= appContext.getAccount();
 
         final ViewPager pager= (ViewPager)this.findViewById(R.id.pager);
+        pager.addOnPageChangeListener(this);
         pager.setAdapter(new SwipeSwitcher(this.getSupportFragmentManager()));
         if(account == null)
         {
@@ -88,14 +93,10 @@ public class HomeActivity
         bar.setDisplayShowCustomEnabled(true);
         bar.setDisplayUseLogoEnabled(true);
         bar.setLogo(R.drawable.icon_logo);
-        if(account != null)
-        {
-            bar.setTitle(String.format("%s - %s", this.getString(R.string.app_name), account.name));
-        }
 
         {
             final IntentFilter ifilter= new IntentFilter(CometService.class.getCanonicalName());
-            this.receiver= new BroadcastReceiver(){
+            final BroadcastReceiver receiver= new BroadcastReceiver(){
                 @Override
                 public void onReceive(Context context, Intent intent)
                 {
@@ -103,11 +104,81 @@ public class HomeActivity
                     HomeActivity.this.onCometEvent(events);
                 }
             };
-            this.registerReceiver(this.receiver, ifilter);
+            this.registerReceiver(receiver, ifilter);
+            this.receivers.add(receiver);
+        }
+        {
+            final IntentFilter ifilter= new IntentFilter(Event.AccountChange.ACTION);
+            final BroadcastReceiver receiver= new BroadcastReceiver(){
+                @Override
+                public void onReceive(Context context, Intent intent)
+                {
+                    final Account account= intent.getParcelableExtra(Event.AccountChange.KEY_ACCOUNT);
+                    HomeActivity.this.onAccountSelected(account);
+                }
+            };
+            this.registerReceiver(receiver, ifilter);
+            this.receivers.add(receiver);
+        }
+        {
+            final IntentFilter ifilter= new IntentFilter(Event.RoomChange.ACTION);
+            final BroadcastReceiver receiver= new BroadcastReceiver(){
+                @Override
+                public void onReceive(Context context, Intent intent)
+                {
+                    final String roomId= intent.getStringExtra(Event.RoomChange.KEY_ROOM_ID);
+                    HomeActivity.this.onRoomSelected(roomId);
+                }
+            };
+            this.registerReceiver(receiver, ifilter);
+            this.receivers.add(receiver);
         }
 
         final Intent service= new Intent(this, CometService.class);
         this.startService(service);
+    }
+
+    @Override
+    public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels)
+    {
+    }
+
+    @Override
+    public void onPageScrollStateChanged(int state)
+    {
+    }
+
+    @Override
+    public void onPageSelected(int position)
+    {
+        final TextView whenceView= (TextView)this.findViewById(R.id.whenceView);
+        final AppContext appContext= (AppContext)this.getApplicationContext();
+        switch(position)
+        {
+            case SwipeSwitcher.POS_ROOM:{
+                final Account account= appContext.getAccount();
+                final String roomId= appContext.getRoomId(account);
+                if(Iterables.size(appContext.getAccounts()) <= 1)
+                {
+                    whenceView.setText(String.format("You're %s, in %s", account.name, roomId));
+                }
+                else
+                {
+                    whenceView.setText("You're in " + roomId);
+                }
+                break;
+            }
+            case SwipeSwitcher.POS_ROOM_LIST:{
+                whenceView.setText("Choose a room");
+                break;
+            }
+            case SwipeSwitcher.POS_ACCOUNT_LIST:{
+                whenceView.setText("Choose an account");
+                break;
+            }
+            default:
+                throw new AssertionError("Unknown page position: " + position);
+        }
     }
 
     @Override
@@ -168,11 +239,11 @@ public class HomeActivity
     {
         super.onDestroy();
 
-        if(this.receiver != null)
+        for(final BroadcastReceiver receiver : this.receivers)
         {
-            this.unregisterReceiver(this.receiver);
-            this.receiver= null;
+            this.unregisterReceiver(receiver);
         }
+        this.receivers.clear();
     }
 
     /* @Override */
@@ -183,14 +254,13 @@ public class HomeActivity
     /*     return true; */
     /* } */
 
-    @Override
-    public void onAccountSelected(Account account)
+    private void onAccountSelected(Account account)
     {
-        final AppContext appCtx= (AppContext)this.getApplicationContext();
-        appCtx.setAccount(account);
+        final AppContext appContext= (AppContext)this.getApplicationContext();
+        appContext.setAccount(account);
 
         final ViewPager pager= (ViewPager)this.findViewById(R.id.pager);
-        if(Strings.isNullOrEmpty(appCtx.getRoomId(account)))
+        if(Strings.isNullOrEmpty(appContext.getRoomId(account)))
         {
             pager.setCurrentItem(SwipeSwitcher.POS_ROOM_LIST);
         }
@@ -199,35 +269,16 @@ public class HomeActivity
             pager.setCurrentItem(SwipeSwitcher.POS_ROOM);
         }
 
-        final SwipeSwitcher adapter= (SwipeSwitcher)pager.getAdapter();
-        final Fragment[] fragments= new Fragment[]{
-            adapter.getFragment(SwipeSwitcher.POS_ROOM),
-            adapter.getFragment(SwipeSwitcher.POS_ROOM_LIST),
-            adapter.getFragment(SwipeSwitcher.POS_ACCOUNT_LIST),
-        };
-        for(final Fragment fragment : fragments)
-        {
-            if(fragment instanceof AccountListFragment.OnAccountSelectedListener)
-            {
-                ((AccountListFragment.OnAccountSelectedListener)fragment).onAccountSelected(account);
-            }
-        }
-
         this.getSupportActionBar().setTitle(String.format("%s - %s", this.getString(R.string.app_name), account.name));
     }
 
-    @Override
-    public void onRoomSelected(CharSequence roomId)
+    private void onRoomSelected(CharSequence roomId)
     {
         final AppContext appContext= (AppContext)this.getApplicationContext();
         appContext.setRoomId(appContext.getAccount(), roomId);
 
         final ViewPager pager= (ViewPager)this.findViewById(R.id.pager);
         pager.setCurrentItem(SwipeSwitcher.POS_ROOM, true);
-
-        final SwipeSwitcher adapter= (SwipeSwitcher)pager.getAdapter();
-        final Fragment fragment= adapter.getFragment(SwipeSwitcher.POS_ROOM);
-        ((RoomListFragment.OnRoomSelectedListener)fragment).onRoomSelected(roomId);
     }
 
     @Override
@@ -311,6 +362,6 @@ public class HomeActivity
         private final Map<Integer, Fragment> fragments= Maps.newHashMap();
     }
 
-    private BroadcastReceiver receiver;
+    private List<BroadcastReceiver> receivers= Lists.newLinkedList();
 }
 

@@ -10,6 +10,11 @@ import android.util.Log;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.http.apache.ApacheHttpTransport;
 import com.google.api.client.repackaged.com.google.common.base.Strings;
+import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
+
+import java.util.Arrays;
 
 import jp.michikusa.chitose.lingr.LingrClient;
 import jp.michikusa.chitose.lingr.LingrClientFactory;
@@ -19,33 +24,34 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class AppContext
     extends Application
 {
+    public Iterable<Account> getAccounts()
+    {
+        final AccountManager manager= AccountManager.get(this);
+        final Account[] accounts= manager.getAccountsByType("com.lingr");
+        return Arrays.asList(accounts);
+    }
+
     public Account getAccount()
     {
         final String name= this.accountName;
-        final boolean autoselect= Strings.isNullOrEmpty(name);
-
-        final AccountManager manager= AccountManager.get(this);
-        final Account[] accounts= manager.getAccountsByType("com.lingr");
-        if(accounts.length <= 0)
+        final Iterable<Account> accounts= this.getAccounts();
+        if(Iterables.isEmpty(accounts))
         {
-            Log.i("AppContext", "no accounts");
             return null;
         }
-        if(autoselect && accounts.length == 1)
-        {
-            return accounts[0];
-        }
 
-        for(final Account account : accounts)
-        {
-            if(account.name.equals(name))
+        final Optional<Account> account= Iterables.tryFind(accounts, new Predicate<Account>(){
+            @Override
+            public boolean apply(Account input)
             {
-                Log.i("AppContext", "Found account " + name);
-                return account;
+                return input.name.equals(name);
             }
+        });
+        if(account.isPresent())
+        {
+            return account.get();
         }
-        Log.i("AppContext", "Couldn't find account name " + name);
-        return null;
+        return Iterables.getFirst(accounts, null);
     }
 
     public void setAccount(Account account)

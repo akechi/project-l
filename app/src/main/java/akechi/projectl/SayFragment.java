@@ -27,9 +27,11 @@ import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.repackaged.com.google.common.base.Strings;
 import com.google.common.base.Splitter;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Lists;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import akechi.projectl.async.LingrTaskLoader;
@@ -40,7 +42,7 @@ import jp.michikusa.chitose.lingr.Room;
 
 public class SayFragment
     extends Fragment
-    implements Button.OnClickListener, RoomListFragment.OnRoomSelectedListener, LoaderManager.LoaderCallbacks<Room.Message>
+    implements Button.OnClickListener, LoaderManager.LoaderCallbacks<Room.Message>
 {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
@@ -61,16 +63,33 @@ public class SayFragment
     public void onAttach(Activity activity) {
         super.onAttach(activity);
 
-        this.receiver= new BroadcastReceiver(){
-            @Override
-            public void onReceive(Context context, Intent intent)
-            {
-                final String replyText= intent.getStringExtra("text");
-                SayFragment.this.reply(replyText);
-            }
-        };
-        final IntentFilter ifilter= new IntentFilter("akechi.projectl.ReplyAction");
-        this.getActivity().registerReceiver(this.receiver, ifilter);
+        {
+            final IntentFilter ifilter= new IntentFilter("akechi.projectl.ReplyAction");
+            final BroadcastReceiver receiver= new BroadcastReceiver(){
+                @Override
+                public void onReceive(Context context, Intent intent)
+                {
+                    final String replyText= intent.getStringExtra("text");
+                    SayFragment.this.reply(replyText);
+                }
+            };
+            this.getActivity().registerReceiver(receiver, ifilter);
+            this.receivers.add(receiver);
+        }
+        {
+            final IntentFilter ifilter= new IntentFilter(Event.RoomChange.ACTION);
+            final BroadcastReceiver receiver= new BroadcastReceiver(){
+                @Override
+                public void onReceive(Context context, Intent intent)
+                {
+                    final String roomId= intent.getStringExtra(Event.RoomChange.KEY_ROOM_ID);
+
+                    SayFragment.this.onRoomSelected(roomId);
+                }
+            };
+            this.getActivity().registerReceiver(receiver, ifilter);
+            this.receivers.add(receiver);
+        }
     }
 
     @Override
@@ -78,11 +97,11 @@ public class SayFragment
     {
         super.onDetach();
 
-        if(this.receiver != null)
+        for(final BroadcastReceiver receiver : this.receivers)
         {
-            this.getActivity().unregisterReceiver(this.receiver);
-            this.receiver= null;
+            this.getActivity().unregisterReceiver(receiver);
         }
+        this.receivers.clear();
     }
 
     public void reply(String text)
@@ -107,8 +126,7 @@ public class SayFragment
         this.getLoaderManager().getLoader(0).forceLoad();
     }
 
-    @Override
-    public void onRoomSelected(CharSequence roomId)
+    private void onRoomSelected(CharSequence roomId)
     {
         Log.i("SayFragment", "input area and say button are enabled");
         this.sayButton.setEnabled(true);
@@ -189,5 +207,5 @@ public class SayFragment
     private EditText inputText;
     private Button sayButton;
 
-    private BroadcastReceiver receiver;
+    private List<BroadcastReceiver> receivers= Lists.newLinkedList();
 }

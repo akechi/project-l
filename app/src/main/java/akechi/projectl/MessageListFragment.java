@@ -2,10 +2,12 @@ package akechi.projectl;
 
 import android.accounts.Account;
 import android.accounts.AccountManager;
+import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -63,7 +65,7 @@ import jp.michikusa.chitose.lingr.Room.Message;
 
 public class MessageListFragment
     extends Fragment
-    implements SwipeRefreshLayout.OnRefreshListener, LoaderManager.LoaderCallbacks<Iterable<Message>>, RoomListFragment.OnRoomSelectedListener, CometService.OnCometEventListener
+    implements SwipeRefreshLayout.OnRefreshListener, LoaderManager.LoaderCallbacks<Iterable<Message>>, CometService.OnCometEventListener
 {
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -83,6 +85,49 @@ public class MessageListFragment
                 this.getLoaderManager().getLoader(LOADER_SHOW_ROOM).forceLoad();
             }
         }
+
+        {
+            final IntentFilter ifilter= new IntentFilter(Event.AccountChange.ACTION);
+            final BroadcastReceiver receiver= new BroadcastReceiver(){
+                @Override
+                public void onReceive(Context context, Intent intent)
+                {
+                    final AppContext appContext1= (AppContext)MessageListFragment.this.getActivity().getApplicationContext();
+                    final Account account= appContext.getAccount();
+                    final String roomId= appContext.getRoomId(account);
+
+                    MessageListFragment.this.onRoomSelected(roomId);
+                }
+            };
+            this.getActivity().registerReceiver(receiver, ifilter);
+            this.receivers.add(receiver);
+        }
+        {
+            final IntentFilter ifilter= new IntentFilter(Event.RoomChange.ACTION);
+            final BroadcastReceiver receiver= new BroadcastReceiver(){
+                @Override
+                public void onReceive(Context context, Intent intent)
+                {
+                    final String roomId= intent.getStringExtra(Event.RoomChange.KEY_ROOM_ID);
+
+                    MessageListFragment.this.onRoomSelected(roomId);
+                }
+            };
+            this.getActivity().registerReceiver(receiver, ifilter);
+            this.receivers.add(receiver);
+        }
+    }
+
+    @Override
+    public void onDestroy()
+    {
+        super.onDestroy();
+
+        for(final BroadcastReceiver receiver : this.receivers)
+        {
+            this.getActivity().unregisterReceiver(receiver);
+        }
+        this.receivers.clear();
     }
 
     @Override
@@ -100,8 +145,7 @@ public class MessageListFragment
         return view;
     }
 
-    @Override
-    public void onRoomSelected(CharSequence roomId)
+    private void onRoomSelected(CharSequence roomId)
     {
         Log.i("MessageListFragment", "On room selected " + roomId);
         final MessageAdapter adapter= (MessageAdapter)this.messageView.getAdapter();
@@ -414,4 +458,6 @@ public class MessageListFragment
     private SwipeRefreshLayout swipeRefreshLayout;
 
     private ListView messageView;
+
+    private final List<BroadcastReceiver> receivers= Lists.newLinkedList();
 }
