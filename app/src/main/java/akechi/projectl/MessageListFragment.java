@@ -147,7 +147,13 @@ public class MessageListFragment
                 break;
             }
             case R.id.menu_item_share:{
-                Toast.makeText(this.getActivity(), "Cannot use yet", Toast.LENGTH_SHORT).show();
+                final int pos= ((ListView.AdapterContextMenuInfo)item.getMenuInfo()).position;
+                final Message message= (Message)this.messageView.getAdapter().getItem(pos);
+                final Intent intent= new Intent(Intent.ACTION_SEND);
+                intent.setType("text/plain");
+                intent.putExtra(Intent.EXTRA_TEXT, message.getText());
+
+                this.getActivity().startActivity(intent);
                 break;
             }
         }
