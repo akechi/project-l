@@ -5,6 +5,7 @@ import android.accounts.AccountManager;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -137,7 +138,12 @@ public class MessageListFragment
                 break;
             }
             case R.id.menu_item_reply:{
-                Toast.makeText(this.getActivity(), "Cannot use yet", Toast.LENGTH_SHORT).show();
+                final int pos= ((ListView.AdapterContextMenuInfo)item.getMenuInfo()).position;
+                final Message message= (Message)this.messageView.getAdapter().getItem(pos);
+                final Intent intent= new Intent("akechi.projectl.ReplyAction");
+                intent.putExtra("text", message.getText());
+
+                this.getActivity().sendBroadcast(intent);
                 break;
             }
             case R.id.menu_item_share:{

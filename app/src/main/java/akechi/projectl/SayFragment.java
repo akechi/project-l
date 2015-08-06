@@ -4,7 +4,11 @@ import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.accounts.AuthenticatorException;
 import android.accounts.OperationCanceledException;
+import android.app.Activity;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -21,10 +25,12 @@ import android.widget.Toast;
 
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.repackaged.com.google.common.base.Strings;
+import com.google.common.base.Splitter;
 import com.google.common.base.Supplier;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.util.regex.Pattern;
 
 import akechi.projectl.async.LingrTaskLoader;
 import jp.michikusa.chitose.lingr.LingrClient;
@@ -49,6 +55,47 @@ public class SayFragment
         this.getLoaderManager().initLoader(0, null, this);
 
         return v;
+    }
+
+    @Override
+    public void onAttach(Activity activity) {
+        super.onAttach(activity);
+
+        this.receiver= new BroadcastReceiver(){
+            @Override
+            public void onReceive(Context context, Intent intent)
+            {
+                final String replyText= intent.getStringExtra("text");
+                SayFragment.this.reply(replyText);
+            }
+        };
+        final IntentFilter ifilter= new IntentFilter("akechi.projectl.ReplyAction");
+        this.getActivity().registerReceiver(this.receiver, ifilter);
+    }
+
+    @Override
+    public void onDetach()
+    {
+        super.onDetach();
+
+        if(this.receiver != null)
+        {
+            this.getActivity().unregisterReceiver(this.receiver);
+            this.receiver= null;
+        }
+    }
+
+    public void reply(String text)
+    {
+        if(Strings.isNullOrEmpty(text))
+        {
+            return;
+        }
+        final Iterable<String> lines= Splitter.on(Pattern.compile("\\r?\\n")).split(text);
+        for(final String line : lines)
+        {
+            this.inputText.getText().append("> " + line + System.getProperty("line.separator"));
+        }
     }
 
     @Override
@@ -141,4 +188,6 @@ public class SayFragment
 
     private EditText inputText;
     private Button sayButton;
+
+    private BroadcastReceiver receiver;
 }
