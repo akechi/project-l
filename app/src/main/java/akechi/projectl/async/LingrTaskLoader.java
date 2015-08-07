@@ -3,6 +3,8 @@ package akechi.projectl.async;
 import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.v4.content.AsyncTaskLoader;
@@ -30,6 +32,20 @@ public abstract class LingrTaskLoader<R>
     {
         try
         {
+            final ConnectivityManager connMan= (ConnectivityManager)this.getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+            final NetworkInfo netInfo= connMan.getActiveNetworkInfo();
+            Log.i("LingrTaskLoader", "netInfo = " + netInfo);
+            if(netInfo != null)
+            {
+                Log.i("LingrTaskLoader", "netInfo.getDetailedState() = " + netInfo.getDetailedState());
+                Log.i("LingrTaskLoader", "netInfo.isAvailable() = " + netInfo.isAvailable());
+            }
+            if(netInfo == null || !netInfo.isConnected())
+            {
+                this.showMessage("Network is currently un-available");
+                return null;
+            }
+
             final AppContext appContext= this.getApplicationContext();
             int nretries= 0;
             while(nretries < MAX_NRETRIES)
