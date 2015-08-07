@@ -14,6 +14,7 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -96,6 +97,37 @@ public class RoomListFragment
         this.listView.setOnItemClickListener(this);
 
         return view;
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState)
+    {
+        super.onSaveInstanceState(outState);
+
+        final String[] ids= new String[this.listView.getAdapter().getCount()];
+        for(int i= 0; i < this.listView.getAdapter().getCount(); ++i)
+        {
+            ids[i]= (String)this.listView.getAdapter().getItem(i);
+        }
+        outState.putStringArray("roomIds", ids);
+    }
+
+    @Override
+    public void onViewStateRestored(Bundle savedInstanceState)
+    {
+        super.onViewStateRestored(savedInstanceState);
+
+        if(savedInstanceState == null)
+        {
+            return;
+        }
+
+        final String[] ids= savedInstanceState.getStringArray("roomIds");
+        this.listView.setAdapter(new ArrayAdapter<String>(
+            this.getActivity(),
+            android.R.layout.simple_list_item_1,
+            ids
+        ));
     }
 
     @Override
