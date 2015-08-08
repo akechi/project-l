@@ -152,11 +152,11 @@ public class HomeActivity
                 final String roomId= appContext.getRoomId(account);
                 if(Iterables.size(appContext.getAccounts()) <= 1)
                 {
-                    whenceView.setText(String.format("You're %s, in %s", account.name, roomId));
+                    whenceView.setText("You're in " + roomId);
                 }
                 else
                 {
-                    whenceView.setText("You're in " + roomId);
+                    whenceView.setText(String.format("You're %s, in %s", account.name, roomId));
                 }
                 break;
             }
