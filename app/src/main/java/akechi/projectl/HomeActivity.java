@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.v4.app.Fragment;
@@ -18,10 +19,19 @@ import android.support.v4.view.ViewPager;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.ActionProvider;
+import android.view.ContextMenu;
 import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.SubMenu;
+import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.api.client.repackaged.com.google.common.base.Strings;
+import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -71,15 +81,10 @@ public class HomeActivity
             }
         }
         final Account account= appContext.getAccount();
-
         final ViewPager pager= (ViewPager)this.findViewById(R.id.pager);
         pager.addOnPageChangeListener(this);
         pager.setAdapter(new SwipeSwitcher(this.getSupportFragmentManager()));
-        if(account == null)
-        {
-            pager.setCurrentItem(SwipeSwitcher.POS_ACCOUNT_LIST);
-        }
-        else if(!Strings.isNullOrEmpty(appContext.getRoomId(account)))
+        if(account != null && !Strings.isNullOrEmpty(appContext.getRoomId(account)))
         {
             pager.setCurrentItem(SwipeSwitcher.POS_ROOM);
         }
@@ -102,19 +107,6 @@ public class HomeActivity
                 {
                     final Events events= (Events)intent.getSerializableExtra("events");
                     HomeActivity.this.onCometEvent(events);
-                }
-            };
-            this.registerReceiver(receiver, ifilter);
-            this.receivers.add(receiver);
-        }
-        {
-            final IntentFilter ifilter= new IntentFilter(Event.AccountChange.ACTION);
-            final BroadcastReceiver receiver= new BroadcastReceiver(){
-                @Override
-                public void onReceive(Context context, Intent intent)
-                {
-                    final Account account= intent.getParcelableExtra(Event.AccountChange.KEY_ACCOUNT);
-                    HomeActivity.this.onAccountSelected(account);
                 }
             };
             this.registerReceiver(receiver, ifilter);
@@ -170,10 +162,6 @@ public class HomeActivity
             }
             case SwipeSwitcher.POS_ROOM_LIST:{
                 whenceView.setText("Choose a room");
-                break;
-            }
-            case SwipeSwitcher.POS_ACCOUNT_LIST:{
-                whenceView.setText("Choose an account");
                 break;
             }
             default:
@@ -246,30 +234,64 @@ public class HomeActivity
         this.receivers.clear();
     }
 
-    /* @Override */
-    /* public boolean onCreateOptionsMenu(Menu menu) */
-    /* { */
-    /*     // Inflate the menu; this adds items to the action bar if it is present. */
-    /*     this.getMenuInflater().inflate(akechi.projectl.R.menu.main, menu); */
-    /*     return true; */
-    /* } */
-
-    private void onAccountSelected(Account account)
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu)
     {
         final AppContext appContext= (AppContext)this.getApplicationContext();
-        appContext.setAccount(account);
-
-        final ViewPager pager= (ViewPager)this.findViewById(R.id.pager);
-        if(Strings.isNullOrEmpty(appContext.getRoomId(account)))
+        final Iterable<Account> accounts= appContext.getAccounts();
+        // only 1 account, make invisible
+        if(Iterables.size(accounts) <= 1)
         {
-            pager.setCurrentItem(SwipeSwitcher.POS_ROOM_LIST);
-        }
-        else
-        {
-            pager.setCurrentItem(SwipeSwitcher.POS_ROOM);
+            return false;
         }
 
-        this.getSupportActionBar().setTitle(String.format("%s - %s", this.getString(R.string.app_name), account.name));
+        for(final Account account : accounts)
+        {
+            menu.add(account.name);
+        }
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item)
+    {
+        final AppContext appContext= (AppContext)this.getApplicationContext();
+        final String accountName= item.getTitle().toString();
+        final Optional<Account> account= Iterables.tryFind(appContext.getAccounts(), new Predicate<Account>(){
+            @Override
+            public boolean apply(Account input)
+            {
+                return input.name.equals(accountName);
+            }
+        });
+        if(!account.isPresent())
+        {
+            Toast.makeText(this, "Did you remove an account? Try again", Toast.LENGTH_SHORT).show();
+            return true;
+        }
+
+        appContext.setAccount(account.get());
+
+        // choose current page
+        {
+            final ViewPager pager= (ViewPager)this.findViewById(R.id.pager);
+            if(Strings.isNullOrEmpty(appContext.getRoomId(account.get())))
+            {
+                pager.setCurrentItem(SwipeSwitcher.POS_ROOM_LIST);
+            }
+            else
+            {
+                pager.setCurrentItem(SwipeSwitcher.POS_ROOM);
+            }
+        }
+        // trigger event
+        {
+            final Intent intent= new Intent(Event.AccountChange.ACTION);
+            intent.putExtra(Event.AccountChange.KEY_ACCOUNT, account);
+            this.sendBroadcast(intent);
+        }
+
+        return true;
     }
 
     private void onRoomSelected(CharSequence roomId)
@@ -290,7 +312,6 @@ public class HomeActivity
         final Fragment[] fragments= new Fragment[]{
                 adapter.getFragment(SwipeSwitcher.POS_ROOM_LIST),
                 adapter.getFragment(SwipeSwitcher.POS_ROOM),
-                adapter.getFragment(SwipeSwitcher.POS_ACCOUNT_LIST),
         };
         for(final Fragment fragment : fragments)
         {
@@ -306,7 +327,6 @@ public class HomeActivity
     {
         public static final int POS_ROOM_LIST= 0;
         public static final int POS_ROOM= 1;
-        public static final int POS_ACCOUNT_LIST= 2;
 
         public SwipeSwitcher(FragmentManager fm)
         {
@@ -338,11 +358,6 @@ public class HomeActivity
                     this.fragments.put(position, fragment);
                     return fragment;
                 }
-                case POS_ACCOUNT_LIST:{
-                    final Fragment fragment= new AccountListFragment();
-                    this.fragments.put(position, fragment);
-                    return fragment;
-                }
                 /* case 2: { */
                 /*     final Fragment fragment = new SettingsFragment(); */
                 /*     this.fragments.put(position, fragment); */
@@ -356,7 +371,7 @@ public class HomeActivity
         @Override
         public int getCount()
         {
-            return 3;
+            return 2;
         }
 
         private final Map<Integer, Fragment> fragments= Maps.newHashMap();
