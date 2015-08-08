@@ -9,12 +9,16 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
+import android.text.Editable;
+import android.text.Selection;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -42,7 +46,7 @@ import jp.michikusa.chitose.lingr.Room;
 
 public class SayFragment
     extends Fragment
-    implements Button.OnClickListener, LoaderManager.LoaderCallbacks<Room.Message>
+    implements Button.OnClickListener, LoaderManager.LoaderCallbacks<Room.Message>, View.OnKeyListener
 {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
@@ -53,6 +57,7 @@ public class SayFragment
         this.sayButton= (Button) v.findViewById(R.id.sayButton);
 
         this.sayButton.setOnClickListener(this);
+        this.inputText.setOnKeyListener(this);
 
         this.getLoaderManager().initLoader(0, null, this);
 
@@ -102,6 +107,34 @@ public class SayFragment
             this.getActivity().unregisterReceiver(receiver);
         }
         this.receivers.clear();
+    }
+
+    @Override
+    public boolean onKey(View v, int keyCode, KeyEvent event)
+    {
+        switch(keyCode)
+        {
+            case KeyEvent.KEYCODE_DPAD_LEFT:{
+                // avoid left key to swipe fragment
+                final int pos= Selection.getSelectionStart(this.inputText.getText());
+                if(pos <= 0)
+                {
+                    return true;
+                }
+                break;
+            }
+            case KeyEvent.KEYCODE_DPAD_RIGHT:{
+                // avoid right key to swipe fragment
+                final int pos= Selection.getSelectionEnd(this.inputText.getText());
+                final int length= this.inputText.getText().length();
+                if(pos >= length)
+                {
+                    return true;
+                }
+                break;
+            }
+        }
+        return false;
     }
 
     public void reply(String text)
