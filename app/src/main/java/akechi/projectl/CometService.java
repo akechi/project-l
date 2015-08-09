@@ -5,8 +5,10 @@ import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.IInterface;
@@ -16,11 +18,15 @@ import android.support.v4.content.Loader;
 import android.util.Log;
 
 import com.google.api.client.repackaged.com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import akechi.projectl.async.LingrTaskLoader;
 import jp.michikusa.chitose.lingr.Events;
@@ -55,21 +61,26 @@ public class CometService
         ;
         this.notifMan.notify(0, notif);
 
-        this.loader= new SubscribeLoader(this){
-            @Override
-            protected Void onLoadInBackground()
-            {
-                try
+        this.loader= this.newSubscribeLoader();
+
+        {
+            final CometService that= this;
+            final IntentFilter ifilter= new IntentFilter(Event.AccountChange.ACTION);
+            final BroadcastReceiver receiver= new BroadcastReceiver(){
+                @Override
+                public void onReceive(Context context, Intent intent)
                 {
-                    return super.onLoadInBackground();
+                    final Loader<Void> oldLoader= that.loader;
+
+                    oldLoader.abandon();
+
+                    that.loader= that.newSubscribeLoader();
+                    that.loader.forceLoad();
                 }
-                finally
-                {
-                    CometService.this.scheduleNext();
-                    return null;
-                }
-            }
-        };
+            };
+            this.registerReceiver(receiver, ifilter);
+            this.receivers.add(receiver);
+        }
     }
 
     @Override
@@ -87,6 +98,12 @@ public class CometService
     public void onDestroy()
     {
         super.onDestroy();
+
+        for(final BroadcastReceiver receiver : this.receivers)
+        {
+            this.unregisterReceiver(receiver);
+        }
+        this.receivers.clear();
     }
 
     private void scheduleNext()
@@ -95,6 +112,44 @@ public class CometService
         final AlarmManager alarmMan= (AlarmManager)this.getSystemService(ALARM_SERVICE);
         // re-invoke myself every 500ms
         alarmMan.set(AlarmManager.RTC, System.currentTimeMillis() + 500, intent);
+    }
+
+    private SubscribeLoader newSubscribeLoader()
+    {
+        return new SubscribeLoader(this){
+            @Override
+            protected Void onLoadInBackground()
+            {
+                try
+                {
+                    return super.onLoadInBackground();
+                }
+                finally
+                {
+                    CometService.this.scheduleNext();
+                    return null;
+                }
+            }
+        };
+    }
+
+    private ObserveLoader newObserveLoader()
+    {
+        return new ObserveLoader(this){
+            @Override
+            protected Void onLoadInBackground()
+            {
+                try
+                {
+                    return super.onLoadInBackground();
+                }
+                finally
+                {
+                    CometService.this.scheduleNext();
+                    return null;
+                }
+            }
+        };
     }
 
     private class SubscribeLoader
@@ -121,21 +176,7 @@ public class CometService
                 return null;
             }
             CometService.this.counter= counter;
-            CometService.this.loader= new ObserveLoader(this.getContext()){
-                @Override
-                protected Void onLoadInBackground()
-                {
-                    try
-                    {
-                        return super.onLoadInBackground();
-                    }
-                    finally
-                    {
-                        CometService.this.scheduleNext();
-                        return null;
-                    }
-                }
-            };
+            CometService.this.loader= CometService.this.newObserveLoader();
             return null;
         }
 
@@ -170,11 +211,14 @@ public class CometService
                 // retry
                 return null;
             }
+            CometService.this.counter= events.getCounter();
+
             final Intent intent= new Intent(CometService.class.getCanonicalName());
             intent.putExtra("events", (Serializable) events);
-            CometService.this.sendBroadcast(intent);
-
-            CometService.this.counter= events.getCounter();
+            if(CometService.this.loader == this)
+            {
+                CometService.this.sendBroadcast(intent);
+            }
             return null;
         }
 
@@ -191,4 +235,6 @@ public class CometService
     private long counter;
 
     private Loader<Void> loader;
+
+    private final List<BroadcastReceiver> receivers= Lists.newLinkedList();
 }
