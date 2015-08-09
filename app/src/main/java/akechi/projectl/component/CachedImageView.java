@@ -53,6 +53,7 @@ public class CachedImageView
         final String scheme= uri.getScheme();
         if("http".equals(scheme))
         {
+            this.setVisibility(View.INVISIBLE);
             new ImageLoader(this, uri).execute();
         }
         else
@@ -181,6 +182,7 @@ public class CachedImageView
         @Override
         protected void onPostExecute(Bitmap bitmap) {
             this.view.setImageBitmap(bitmap);
+            this.view.setVisibility(View.VISIBLE);
         }
 
         private static String escape(URL url)
