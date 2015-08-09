@@ -283,11 +283,12 @@ public class HomeActivity
             {
                 pager.setCurrentItem(SwipeSwitcher.POS_ROOM);
             }
+            this.onPageSelected(pager.getCurrentItem());
         }
         // trigger event
         {
             final Intent intent= new Intent(Event.AccountChange.ACTION);
-            intent.putExtra(Event.AccountChange.KEY_ACCOUNT, account);
+            intent.putExtra(Event.AccountChange.KEY_ACCOUNT, account.get());
             this.sendBroadcast(intent);
         }
 
