@@ -93,6 +93,7 @@ public class HomeActivity
         {
             pager.setCurrentItem(SwipeSwitcher.POS_ROOM_LIST);
         }
+        this.onPageSelected(pager.getCurrentItem());
 
         final ActionBar bar= this.getSupportActionBar();
         bar.setDisplayShowHomeEnabled(true);
@@ -154,16 +155,28 @@ public class HomeActivity
                 final String roomId= appContext.getRoomId(account);
                 if(Iterables.size(appContext.getAccounts()) <= 1)
                 {
-                    whenceView.setText("You're in " + roomId);
+                    whenceView.setText(Strings.isNullOrEmpty(roomId)
+                        ? "You're not in the room"
+                        : "You're in " + roomId
+                    );
                 }
                 else
                 {
-                    whenceView.setText(String.format("You're %s, in %s", account.name, roomId));
+                    whenceView.setText(Strings.isNullOrEmpty(roomId)
+                        ? String.format("You're %s, not in the room", account.name)
+                        : String.format("You're %s, in %s", account.name, roomId)
+                    );
                 }
                 break;
             }
             case SwipeSwitcher.POS_ROOM_LIST:{
-                whenceView.setText("Choose a room");
+                final Account account= appContext.getAccount();
+                whenceView.setText(String.format("Hi %s, choose a room", account.name));
+                break;
+            }
+            case SwipeSwitcher.POS_PREFERENCE:{
+                final Account account= appContext.getAccount();
+                whenceView.setText("Settings for " + account.name);
                 break;
             }
             default:
@@ -332,6 +345,8 @@ public class HomeActivity
     {
         public static final int POS_ROOM_LIST= 0;
         public static final int POS_ROOM= 1;
+        public static final int POS_PREFERENCE= 2;
+        public static final int NPAGES= 3;
 
         public SwipeSwitcher(FragmentManager fm)
         {
@@ -363,11 +378,11 @@ public class HomeActivity
                     this.fragments.put(position, fragment);
                     return fragment;
                 }
-                /* case 2: { */
-                /*     final Fragment fragment = new SettingsFragment(); */
-                /*     this.fragments.put(position, fragment); */
-                /*     return fragment; */
-                /* } */
+                case POS_PREFERENCE:{
+                    final Fragment fragment= new SettingsFragment();
+                    this.fragments.put(position, fragment);
+                    return fragment;
+                }
                 default:
                     throw new AssertionError();
             }
@@ -376,7 +391,7 @@ public class HomeActivity
         @Override
         public int getCount()
         {
-            return 2;
+            return NPAGES;
         }
 
         private final Map<Integer, Fragment> fragments= Maps.newHashMap();

@@ -27,6 +27,16 @@ public final class Event
         }
     }
 
+    public static final class PreferenceChange
+    {
+        public static final String ACTION= PreferenceChange.class.getCanonicalName();
+
+        private PreferenceChange()
+        {
+            throw new AssertionError();
+        }
+    }
+
     private Event()
     {
         throw new AssertionError();

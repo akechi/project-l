@@ -10,11 +10,15 @@ import android.util.Log;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.http.apache.ApacheHttpTransport;
 import com.google.api.client.repackaged.com.google.common.base.Strings;
+import com.google.common.base.Functions;
+import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
+import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 import jp.michikusa.chitose.lingr.LingrClient;
 import jp.michikusa.chitose.lingr.LingrClientFactory;
@@ -40,10 +44,9 @@ public class AppContext
             return null;
         }
 
-        final Optional<Account> account= Iterables.tryFind(accounts, new Predicate<Account>(){
+        final Optional<Account> account= Iterables.tryFind(accounts, new Predicate<Account>() {
             @Override
-            public boolean apply(Account input)
-            {
+            public boolean apply(Account input) {
                 return input.name.equals(name);
             }
         });
@@ -77,6 +80,31 @@ public class AppContext
 
         final AccountManager manager= AccountManager.get(this);
         manager.setUserData(account, "roomId", roomId.toString());
+    }
+
+    public Iterable<String> getRoomIds(Account account)
+    {
+        checkNotNull(account);
+
+        final AccountManager manager= AccountManager.get(this);
+        final String ids= manager.getUserData(account, "roomIdList");
+
+        if(Strings.isNullOrEmpty(ids))
+        {
+            return Collections.emptyList();
+        }
+        return Splitter.on(',').split(ids);
+    }
+
+    public void setRoomIds(Account account, Iterable<? extends CharSequence> roomIds)
+    {
+        checkNotNull(account);
+
+        final Iterable<String> ids= Iterables.transform(roomIds, Functions.toStringFunction());
+        final String value= Joiner.on(',').join(ids);
+
+        final AccountManager manager= AccountManager.get(this);
+        manager.setUserData(account, "roomIdList", value);
     }
 
     public LingrClient getLingrClient()

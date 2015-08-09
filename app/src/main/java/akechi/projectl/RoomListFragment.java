@@ -27,6 +27,7 @@ import android.widget.ListView;
 import android.widget.Toast;
 
 import com.google.api.client.extensions.android.http.AndroidHttp;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import java.io.EOFException;
@@ -38,6 +39,7 @@ import akechi.projectl.async.LingrTaskLoader;
 import jp.michikusa.chitose.lingr.LingrClient;
 import jp.michikusa.chitose.lingr.LingrClientFactory;
 import jp.michikusa.chitose.lingr.LingrException;
+import jp.michikusa.chitose.lingr.Room;
 
 public class RoomListFragment
     extends Fragment
@@ -58,6 +60,19 @@ public class RoomListFragment
         final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getActivity().getApplicationContext());
         {
             final IntentFilter ifilter= new IntentFilter(Event.AccountChange.ACTION);
+            final BroadcastReceiver receiver= new BroadcastReceiver(){
+                @Override
+                public void onReceive(Context context, Intent intent)
+                {
+                    RoomListFragment.this.swipeRefreshLayout.setRefreshing(true);
+                    RoomListFragment.this.onRefresh();
+                }
+            };
+            lbMan.registerReceiver(receiver, ifilter);
+            this.receivers.add(receiver);
+        }
+        {
+            final IntentFilter ifilter= new IntentFilter(Event.PreferenceChange.ACTION);
             final BroadcastReceiver receiver= new BroadcastReceiver(){
                 @Override
                 public void onReceive(Context context, Intent intent)
@@ -192,7 +207,18 @@ public class RoomListFragment
         public Iterable<String> loadInBackground(CharSequence authToken, LingrClient lingr)
             throws IOException, LingrException
         {
-            return lingr.getRooms(authToken);
+            final AppContext appContext= this.getApplicationContext();
+            final Account account= appContext.getAccount();
+            final Iterable<String> roomIds= appContext.getRoomIds(account);
+
+            if(Iterables.isEmpty(roomIds))
+            {
+                return lingr.getRooms(authToken);
+            }
+            else
+            {
+                return roomIds;
+            }
         }
     }
 

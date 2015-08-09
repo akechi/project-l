@@ -1,5 +1,6 @@
 package akechi.projectl;
 
+import android.accounts.Account;
 import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -19,6 +20,7 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import com.google.api.client.repackaged.com.google.common.base.Strings;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import java.io.FileDescriptor;
@@ -64,13 +66,14 @@ public class CometService
 
         this.loader= this.newSubscribeLoader();
 
+        final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getApplicationContext());
         {
-            final CometService that= this;
             final IntentFilter ifilter= new IntentFilter(Event.AccountChange.ACTION);
             final BroadcastReceiver receiver= new BroadcastReceiver(){
                 @Override
                 public void onReceive(Context context, Intent intent)
                 {
+                    final CometService that= CometService.this;
                     final Loader<Void> oldLoader= that.loader;
 
                     oldLoader.abandon();
@@ -79,7 +82,24 @@ public class CometService
                     that.loader.forceLoad();
                 }
             };
-            final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getApplicationContext());
+            lbMan.registerReceiver(receiver, ifilter);
+            this.receivers.add(receiver);
+        }
+        {
+            final IntentFilter ifilter= new IntentFilter(Event.PreferenceChange.ACTION);
+            final BroadcastReceiver receiver= new BroadcastReceiver(){
+                @Override
+                public void onReceive(Context context, Intent intent)
+                {
+                    final CometService that= CometService.this;
+                    final Loader<Void> oldLoader= that.loader;
+
+                    oldLoader.abandon();
+
+                    that.loader= that.newSubscribeLoader();
+                    that.loader.forceLoad();
+                }
+            };
             lbMan.registerReceiver(receiver, ifilter);
             this.receivers.add(receiver);
         }
@@ -167,7 +187,18 @@ public class CometService
         public Void loadInBackground(CharSequence authToken, LingrClient lingr)
                 throws IOException, LingrException
         {
-            final Iterable<String> roomIds= lingr.getRooms(authToken);
+            final AppContext appContext= this.getApplicationContext();
+            final Account account= appContext.getAccount();
+            final Iterable<String> ids= appContext.getRoomIds(account);
+            final Iterable<String> roomIds;
+            if(Iterables.isEmpty(ids))
+            {
+                roomIds= lingr.getRooms(authToken);
+            }
+            else
+            {
+                roomIds= ids;
+            }
             lingr.unsubscribe(authToken, roomIds);
             final long counter= lingr.subscribe(authToken, true, roomIds);
             // sometimes, lingr returns 0 value for counter
