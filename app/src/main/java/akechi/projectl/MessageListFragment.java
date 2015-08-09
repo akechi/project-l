@@ -17,6 +17,7 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.util.Log;
 import android.view.ContextMenu;
@@ -86,6 +87,7 @@ public class MessageListFragment
             }
         }
 
+        final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getActivity().getApplicationContext());
         {
             final IntentFilter ifilter= new IntentFilter(Event.AccountChange.ACTION);
             final BroadcastReceiver receiver= new BroadcastReceiver(){
@@ -99,7 +101,7 @@ public class MessageListFragment
                     MessageListFragment.this.onRoomSelected(roomId);
                 }
             };
-            this.getActivity().registerReceiver(receiver, ifilter);
+            lbMan.registerReceiver(receiver, ifilter);
             this.receivers.add(receiver);
         }
         {
@@ -113,7 +115,7 @@ public class MessageListFragment
                     MessageListFragment.this.onRoomSelected(roomId);
                 }
             };
-            this.getActivity().registerReceiver(receiver, ifilter);
+            lbMan.registerReceiver(receiver, ifilter);
             this.receivers.add(receiver);
         }
     }
@@ -123,9 +125,10 @@ public class MessageListFragment
     {
         super.onDestroy();
 
+        final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getActivity().getApplicationContext());
         for(final BroadcastReceiver receiver : this.receivers)
         {
-            this.getActivity().unregisterReceiver(receiver);
+            lbMan.unregisterReceiver(receiver);
         }
         this.receivers.clear();
     }
@@ -187,7 +190,8 @@ public class MessageListFragment
                 final Intent intent= new Intent("akechi.projectl.ReplyAction");
                 intent.putExtra("text", message.getText());
 
-                this.getActivity().sendBroadcast(intent);
+                final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getActivity().getApplicationContext());
+                lbMan.sendBroadcast(intent);
                 break;
             }
             case R.id.menu_item_share:{

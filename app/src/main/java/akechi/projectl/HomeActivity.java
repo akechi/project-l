@@ -15,6 +15,7 @@ import android.os.IBinder;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentStatePagerAdapter;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
@@ -99,6 +100,7 @@ public class HomeActivity
         bar.setDisplayUseLogoEnabled(true);
         bar.setLogo(R.drawable.icon_logo);
 
+        final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getApplicationContext());
         {
             final IntentFilter ifilter= new IntentFilter(CometService.class.getCanonicalName());
             final BroadcastReceiver receiver= new BroadcastReceiver(){
@@ -109,7 +111,7 @@ public class HomeActivity
                     HomeActivity.this.onCometEvent(events);
                 }
             };
-            this.registerReceiver(receiver, ifilter);
+            lbMan.registerReceiver(receiver, ifilter);
             this.receivers.add(receiver);
         }
         {
@@ -122,7 +124,7 @@ public class HomeActivity
                     HomeActivity.this.onRoomSelected(roomId);
                 }
             };
-            this.registerReceiver(receiver, ifilter);
+            lbMan.registerReceiver(receiver, ifilter);
             this.receivers.add(receiver);
         }
 
@@ -227,9 +229,10 @@ public class HomeActivity
     {
         super.onDestroy();
 
+        final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getApplicationContext());
         for(final BroadcastReceiver receiver : this.receivers)
         {
-            this.unregisterReceiver(receiver);
+            lbMan.unregisterReceiver(receiver);
         }
         this.receivers.clear();
     }
@@ -289,7 +292,8 @@ public class HomeActivity
         {
             final Intent intent= new Intent(Event.AccountChange.ACTION);
             intent.putExtra(Event.AccountChange.KEY_ACCOUNT, account.get());
-            this.sendBroadcast(intent);
+            final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getApplicationContext());
+            lbMan.sendBroadcast(intent);
         }
 
         return true;

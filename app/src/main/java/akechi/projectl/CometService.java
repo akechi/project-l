@@ -15,6 +15,7 @@ import android.os.IInterface;
 import android.os.Parcel;
 import android.os.RemoteException;
 import android.support.v4.content.Loader;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import com.google.api.client.repackaged.com.google.common.base.Strings;
@@ -78,7 +79,8 @@ public class CometService
                     that.loader.forceLoad();
                 }
             };
-            this.registerReceiver(receiver, ifilter);
+            final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getApplicationContext());
+            lbMan.registerReceiver(receiver, ifilter);
             this.receivers.add(receiver);
         }
     }
@@ -99,9 +101,10 @@ public class CometService
     {
         super.onDestroy();
 
+        final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getApplicationContext());
         for(final BroadcastReceiver receiver : this.receivers)
         {
-            this.unregisterReceiver(receiver);
+            lbMan.unregisterReceiver(receiver);
         }
         this.receivers.clear();
     }
@@ -217,7 +220,8 @@ public class CometService
             intent.putExtra("events", (Serializable) events);
             if(CometService.this.loader == this)
             {
-                CometService.this.sendBroadcast(intent);
+                final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(CometService.this.getApplicationContext());
+                lbMan.sendBroadcast(intent);
             }
             return null;
         }

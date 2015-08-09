@@ -44,7 +44,8 @@ public class RoomListFragment
     implements ListView.OnItemClickListener, LoaderManager.LoaderCallbacks<Iterable<String>>, SwipeRefreshLayout.OnRefreshListener
 {
     @Override
-    public void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState)
+    {
         super.onCreate(savedInstanceState);
 
         this.getLoaderManager().initLoader(0, null, this);
@@ -54,6 +55,7 @@ public class RoomListFragment
             this.getLoaderManager().getLoader(0).forceLoad();
         }
 
+        final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getActivity().getApplicationContext());
         {
             final IntentFilter ifilter= new IntentFilter(Event.AccountChange.ACTION);
             final BroadcastReceiver receiver= new BroadcastReceiver(){
@@ -64,7 +66,7 @@ public class RoomListFragment
                     RoomListFragment.this.onRefresh();
                 }
             };
-            this.getActivity().registerReceiver(receiver, ifilter);
+            lbMan.registerReceiver(receiver, ifilter);
             this.receivers.add(receiver);
         }
     }
@@ -74,9 +76,10 @@ public class RoomListFragment
     {
         super.onDestroy();
 
+        final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getActivity().getApplicationContext());
         for(final BroadcastReceiver receiver : this.receivers)
         {
-            this.getActivity().unregisterReceiver(receiver);
+            lbMan.unregisterReceiver(receiver);
         }
         this.receivers.clear();
     }
@@ -136,7 +139,8 @@ public class RoomListFragment
 
         final Intent intent= new Intent(Event.RoomChange.ACTION);
         intent.putExtra(Event.RoomChange.KEY_ROOM_ID, roomId.toString());
-        this.getActivity().sendBroadcast(intent);
+        final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getActivity().getApplicationContext());
+        lbMan.sendBroadcast(intent);
     }
 
     @Override

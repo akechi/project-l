@@ -15,6 +15,7 @@ import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
+import android.support.v4.content.LocalBroadcastManager;
 import android.text.Editable;
 import android.text.Selection;
 import android.util.Log;
@@ -68,6 +69,7 @@ public class SayFragment
     public void onAttach(Activity activity) {
         super.onAttach(activity);
 
+        final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getActivity().getApplicationContext());
         {
             final IntentFilter ifilter= new IntentFilter("akechi.projectl.ReplyAction");
             final BroadcastReceiver receiver= new BroadcastReceiver(){
@@ -78,7 +80,7 @@ public class SayFragment
                     SayFragment.this.reply(replyText);
                 }
             };
-            this.getActivity().registerReceiver(receiver, ifilter);
+            lbMan.registerReceiver(receiver, ifilter);
             this.receivers.add(receiver);
         }
         {
@@ -92,7 +94,7 @@ public class SayFragment
                     SayFragment.this.onRoomSelected(roomId);
                 }
             };
-            this.getActivity().registerReceiver(receiver, ifilter);
+            lbMan.registerReceiver(receiver, ifilter);
             this.receivers.add(receiver);
         }
     }
@@ -102,9 +104,10 @@ public class SayFragment
     {
         super.onDetach();
 
+        final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getActivity().getApplicationContext());
         for(final BroadcastReceiver receiver : this.receivers)
         {
-            this.getActivity().unregisterReceiver(receiver);
+            lbMan.unregisterReceiver(receiver);
         }
         this.receivers.clear();
     }
