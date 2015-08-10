@@ -127,10 +127,10 @@ public class CometService
                         @Override
                         public String apply(Account input)
                         {
-                            return input.name;
+                            return Pattern.quote(input.name);
                         }
                     });
-                    final Pattern mentionPattern= Pattern.compile("@(?:" + Joiner.on('|').join(accountNames) + ")\\s");
+                    final Pattern mentionPattern= Pattern.compile("@(?:" + Joiner.on('|').join(accountNames) + ")\\b");
                     final Events events= (Events)intent.getSerializableExtra("events");
                     for(final Events.Event event : events.getEvents())
                     {
