@@ -253,17 +253,18 @@ public class HomeActivity
     @Override
     public boolean onCreateOptionsMenu(Menu menu)
     {
+        // menu.add(Menu.NONE, MENU_ITEM_PREFERENCE, Menu.NONE, "Preference");
+
+        // Switch account
         final AppContext appContext= (AppContext)this.getApplicationContext();
         final Iterable<Account> accounts= appContext.getAccounts();
-        // only 1 account, make invisible
-        if(Iterables.size(accounts) <= 1)
+        if(Iterables.size(accounts) >= 1)
         {
-            return false;
-        }
-
-        for(final Account account : accounts)
-        {
-            menu.add(account.name);
+            final SubMenu subMenu= menu.addSubMenu(Menu.NONE, Menu.NONE, Menu.NONE, "Switch account");
+            for(final Account account : accounts)
+            {
+                subMenu.add(Menu.NONE, MENU_ITEM_ACCOUNT, Menu.NONE, account.name);
+            }
         }
         return true;
     }
@@ -271,45 +272,53 @@ public class HomeActivity
     @Override
     public boolean onOptionsItemSelected(MenuItem item)
     {
-        final AppContext appContext= (AppContext)this.getApplicationContext();
-        final String accountName= item.getTitle().toString();
-        final Optional<Account> account= Iterables.tryFind(appContext.getAccounts(), new Predicate<Account>(){
-            @Override
-            public boolean apply(Account input)
-            {
-                return input.name.equals(accountName);
-            }
-        });
-        if(!account.isPresent())
+        switch(item.getItemId())
         {
-            Toast.makeText(this, "Did you remove an account? Try again", Toast.LENGTH_SHORT).show();
-            return true;
-        }
-
-        appContext.setAccount(account.get());
-
-        // choose current page
-        {
-            final ViewPager pager= (ViewPager)this.findViewById(R.id.pager);
-            if(Strings.isNullOrEmpty(appContext.getRoomId(account.get())))
-            {
-                pager.setCurrentItem(SwipeSwitcher.POS_ROOM_LIST);
+            case MENU_ITEM_PREFERENCE:{
+                return true;
             }
-            else
-            {
-                pager.setCurrentItem(SwipeSwitcher.POS_ROOM);
-            }
-            this.onPageSelected(pager.getCurrentItem());
-        }
-        // trigger event
-        {
-            final Intent intent= new Intent(Event.AccountChange.ACTION);
-            intent.putExtra(Event.AccountChange.KEY_ACCOUNT, account.get());
-            final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getApplicationContext());
-            lbMan.sendBroadcast(intent);
-        }
+            case MENU_ITEM_ACCOUNT:{
+                final AppContext appContext= (AppContext)this.getApplicationContext();
+                final String accountName= item.getTitle().toString();
+                final Optional<Account> account= Iterables.tryFind(appContext.getAccounts(), new Predicate<Account>(){
+                    @Override
+                    public boolean apply(Account input)
+                    {
+                        return input.name.equals(accountName);
+                    }
+                });
+                if(!account.isPresent())
+                {
+                    Toast.makeText(this, "Did you remove an account? Try again", Toast.LENGTH_SHORT).show();
+                    return true;
+                }
 
-        return true;
+                appContext.setAccount(account.get());
+
+                // choose current page
+                {
+                    final ViewPager pager= (ViewPager)this.findViewById(R.id.pager);
+                    if(Strings.isNullOrEmpty(appContext.getRoomId(account.get())))
+                    {
+                        pager.setCurrentItem(SwipeSwitcher.POS_ROOM_LIST);
+                    }
+                    else
+                    {
+                        pager.setCurrentItem(SwipeSwitcher.POS_ROOM);
+                    }
+                    this.onPageSelected(pager.getCurrentItem());
+                }
+                // trigger event
+                {
+                    final Intent intent= new Intent(Event.AccountChange.ACTION);
+                    intent.putExtra(Event.AccountChange.KEY_ACCOUNT, account.get());
+                    final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getApplicationContext());
+                    lbMan.sendBroadcast(intent);
+                }
+                return true;
+            }
+        }
+        return false;
     }
 
     private void onRoomSelected(CharSequence roomId)
@@ -396,6 +405,9 @@ public class HomeActivity
 
         private final Map<Integer, Fragment> fragments= Maps.newHashMap();
     }
+
+    private static final int MENU_ITEM_PREFERENCE= 1;
+    private static final int MENU_ITEM_ACCOUNT= 2;
 
     private List<BroadcastReceiver> receivers= Lists.newLinkedList();
 }
