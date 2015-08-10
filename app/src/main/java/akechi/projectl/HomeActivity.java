@@ -100,6 +100,7 @@ public class HomeActivity
         bar.setDisplayShowCustomEnabled(true);
         bar.setDisplayUseLogoEnabled(true);
         bar.setLogo(R.drawable.icon_logo);
+        bar.setIcon(R.drawable.icon_logo);
 
         final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getApplicationContext());
         {
@@ -172,11 +173,6 @@ public class HomeActivity
             case SwipeSwitcher.POS_ROOM_LIST:{
                 final Account account= appContext.getAccount();
                 whenceView.setText(String.format("Hi %s, choose a room", account.name));
-                break;
-            }
-            case SwipeSwitcher.POS_PREFERENCE:{
-                final Account account= appContext.getAccount();
-                whenceView.setText("Settings for " + account.name);
                 break;
             }
             default:
@@ -253,7 +249,7 @@ public class HomeActivity
     @Override
     public boolean onCreateOptionsMenu(Menu menu)
     {
-        // menu.add(Menu.NONE, MENU_ITEM_PREFERENCE, Menu.NONE, "Preference");
+        menu.add(Menu.NONE, MENU_ITEM_PREFERENCE, Menu.NONE, "Settings");
 
         // Switch account
         final AppContext appContext= (AppContext)this.getApplicationContext();
@@ -275,6 +271,8 @@ public class HomeActivity
         switch(item.getItemId())
         {
             case MENU_ITEM_PREFERENCE:{
+                final Intent intent= new Intent(this, SettingsActivity.class);
+                this.startActivity(intent);
                 return true;
             }
             case MENU_ITEM_ACCOUNT:{
@@ -354,8 +352,7 @@ public class HomeActivity
     {
         public static final int POS_ROOM_LIST= 0;
         public static final int POS_ROOM= 1;
-        public static final int POS_PREFERENCE= 2;
-        public static final int NPAGES= 3;
+        public static final int NPAGES= 2;
 
         public SwipeSwitcher(FragmentManager fm)
         {
@@ -384,11 +381,6 @@ public class HomeActivity
                 }
                 case POS_ROOM:{
                     final Fragment fragment= new RoomFragment();
-                    this.fragments.put(position, fragment);
-                    return fragment;
-                }
-                case POS_PREFERENCE:{
-                    final Fragment fragment= new SettingsFragment();
                     this.fragments.put(position, fragment);
                     return fragment;
                 }

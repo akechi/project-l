@@ -30,8 +30,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".authenticator.LingrAuthenticatorActivity" >
-        </activity>
+        <activity android:name=".SettingsActivity" />
+        <activity android:name=".authenticator.LingrAuthenticatorActivity" />
         <service android:name=".authenticator.LingrAuthenticatorService">
             <intent-filter>
                 <action android:name="android.accounts.AccountAuthenticator" />
