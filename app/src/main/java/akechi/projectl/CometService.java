@@ -15,26 +15,38 @@ import android.os.IBinder;
 import android.os.IInterface;
 import android.os.Parcel;
 import android.os.RemoteException;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.content.Loader;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import com.google.api.client.repackaged.com.google.common.base.Strings;
+import com.google.api.client.util.DateTime;
+import com.google.common.base.Function;
+import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.Serializable;
+import java.text.DateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
+
+import javax.annotation.Nullable;
 
 import akechi.projectl.async.LingrTaskLoader;
 import jp.michikusa.chitose.lingr.Events;
 import jp.michikusa.chitose.lingr.LingrClient;
 import jp.michikusa.chitose.lingr.LingrException;
+import jp.michikusa.chitose.lingr.Room;
 
 public class CometService
     extends Service
@@ -55,12 +67,13 @@ public class CometService
     {
         super.onCreate();
 
-        this.notifMan= (NotificationManager)this.getSystemService(NOTIFICATION_SERVICE);
-        final Notification notif= new Notification.Builder(this)
+        this.notifMan= NotificationManagerCompat.from(this.getApplicationContext());
+        final Notification notif= new NotificationCompat.Builder(this)
+            .setSmallIcon(R.drawable.icon_logo)
             .setContentTitle("ProjectL ...started")
+            .setContentInfo("Info")
             .setContentIntent(PendingIntent.getActivity(this, 0, new Intent(this, HomeActivity.class), 0))
-            // for backword-compatibility
-            .getNotification()
+            .build()
         ;
         this.notifMan.notify(0, notif);
 
@@ -98,6 +111,50 @@ public class CometService
 
                     that.loader= that.newSubscribeLoader();
                     that.loader.forceLoad();
+                }
+            };
+            lbMan.registerReceiver(receiver, ifilter);
+            this.receivers.add(receiver);
+        }
+        {
+            final IntentFilter ifilter= new IntentFilter(CometService.class.getCanonicalName());
+            final BroadcastReceiver receiver= new BroadcastReceiver(){
+                @Override
+                public void onReceive(Context context, Intent intent)
+                {
+                    final AppContext appContext= (AppContext)CometService.this.getApplicationContext();
+                    final Iterable<String> accountNames= Iterables.transform(appContext.getAccounts(), new Function<Account, String>(){
+                        @Override
+                        public String apply(Account input)
+                        {
+                            return input.name;
+                        }
+                    });
+                    final Pattern mentionPattern= Pattern.compile("@(?:" + Joiner.on('|').join(accountNames) + ")\\s");
+                    final Events events= (Events)intent.getSerializableExtra("events");
+                    for(final Events.Event event : events.getEvents())
+                    {
+                        if(event.getMessage() == null)
+                        {
+                            continue;
+                        }
+
+                        final Room.Message message= event.getMessage();
+                        final boolean mentioned= mentionPattern.matcher(message.getText()).find();
+                        if(mentioned)
+                        {
+                            final Notification notif= new NotificationCompat.Builder(CometService.this)
+                                .setSmallIcon(R.drawable.icon_logo)
+                                .setContentTitle("ProjectL")
+                                .setContentText(message.getRoom())
+                                .setSubText(message.getText())
+                                .setContentInfo(message.getNickname())
+                                .setTicker(DateFormat.getDateTimeInstance().format(new Date(new DateTime(message.getTimestamp()).getValue())))
+                                .build()
+                            ;
+                            CometService.this.notifMan.notify(0, notif);
+                        }
+                    }
                 }
             };
             lbMan.registerReceiver(receiver, ifilter);
@@ -265,7 +322,7 @@ public class CometService
         }
     }
 
-    private NotificationManager notifMan;
+    private NotificationManagerCompat notifMan;
 
     private long counter;
 
