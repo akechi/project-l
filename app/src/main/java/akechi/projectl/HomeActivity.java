@@ -2,6 +2,7 @@ package akechi.projectl;
 
 import android.accounts.Account;
 import android.accounts.AccountManager;
+import android.app.Dialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -12,9 +13,13 @@ import android.content.SharedPreferences;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentStatePagerAdapter;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.ActionBar;
@@ -23,10 +28,12 @@ import android.util.Log;
 import android.view.ActionProvider;
 import android.view.ContextMenu;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.SubMenu;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -37,6 +44,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
+import java.text.DateFormat;
 import java.util.List;
 import java.util.Map;
 
@@ -250,6 +258,7 @@ public class HomeActivity
     public boolean onCreateOptionsMenu(Menu menu)
     {
         menu.add(Menu.NONE, MENU_ITEM_PREFERENCE, Menu.NONE, "Settings");
+        menu.add(Menu.NONE, MENU_ITEM_APP_INFO, Menu.NONE, "App Info");
 
         // Switch account
         final AppContext appContext= (AppContext)this.getApplicationContext();
@@ -273,6 +282,11 @@ public class HomeActivity
             case MENU_ITEM_PREFERENCE:{
                 final Intent intent= new Intent(this, SettingsActivity.class);
                 this.startActivity(intent);
+                return true;
+            }
+            case MENU_ITEM_APP_INFO:{
+                final DialogFragment dialog= new AppInfoFragment();
+                dialog.show(this.getSupportFragmentManager(), "dialog");
                 return true;
             }
             case MENU_ITEM_ACCOUNT:{
@@ -399,7 +413,8 @@ public class HomeActivity
     }
 
     private static final int MENU_ITEM_PREFERENCE= 1;
-    private static final int MENU_ITEM_ACCOUNT= 2;
+    private static final int MENU_ITEM_APP_INFO= 2;
+    private static final int MENU_ITEM_ACCOUNT= 3;
 
     private List<BroadcastReceiver> receivers= Lists.newLinkedList();
 }
