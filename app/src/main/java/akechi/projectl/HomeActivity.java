@@ -254,7 +254,7 @@ public class HomeActivity
         // Switch account
         final AppContext appContext= (AppContext)this.getApplicationContext();
         final Iterable<Account> accounts= appContext.getAccounts();
-        if(Iterables.size(accounts) >= 1)
+        if(Iterables.size(accounts) > 1)
         {
             final SubMenu subMenu= menu.addSubMenu(Menu.NONE, Menu.NONE, Menu.NONE, "Switch account");
             for(final Account account : accounts)
