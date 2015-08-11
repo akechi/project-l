@@ -31,6 +31,7 @@ import java.net.URLEncoder;
 import java.util.HashSet;
 import java.util.Set;
 
+import akechi.projectl.AppContext;
 import akechi.projectl.R;
 
 public class CachedImageView
@@ -54,7 +55,15 @@ public class CachedImageView
         if("http".equals(scheme))
         {
             this.setVisibility(View.INVISIBLE);
-            new ImageLoader(this, uri).execute();
+            final AppContext appContext= (AppContext)this.getContext().getApplicationContext();
+            if(appContext.isIconCacheEnabled())
+            {
+                new CacheableImageLoader(this, uri).execute();
+            }
+            else
+            {
+                new NoCacheImageLoader(this, uri).execute();
+            }
         }
         else
         {
@@ -62,10 +71,10 @@ public class CachedImageView
         }
     }
 
-    private static final class ImageLoader
+    private static final class CacheableImageLoader
         extends AsyncTask<Void, Void, Bitmap>
     {
-        public ImageLoader(ImageView view, Uri uri)
+        public CacheableImageLoader(ImageView view, Uri uri)
         {
             this.view= view;
             this.uri= uri;
@@ -81,7 +90,8 @@ public class CachedImageView
             {
                 return null;
             }
-            final File cacheDir= new File(this.view.getContext().getCacheDir(), "icons");
+            final AppContext appContext= (AppContext)this.view.getContext().getApplicationContext();
+            final File cacheDir= appContext.getIconCacheDir();
             if(!cacheDir.isDirectory())
             {
                 if(!cacheDir.mkdirs())
@@ -198,6 +208,61 @@ public class CachedImageView
         private static final Object lock= new Object();
 
         private static final Set<Uri> loadingUris= new HashSet<>();
+
+        private final ImageView view;
+        private Uri uri;
+    }
+
+    private static final class NoCacheImageLoader
+            extends AsyncTask<Void, Void, Bitmap>
+    {
+        public NoCacheImageLoader(ImageView view, Uri uri)
+        {
+            this.view= view;
+            this.uri= uri;
+        }
+
+        @Override
+        protected Bitmap doInBackground(Void... params) {
+            final URL url;
+            try{
+                url= new URL(this.uri.toString());
+            }
+            catch(MalformedURLException e)
+            {
+                return null;
+            }
+
+            InputStream in= null;
+            try
+            {
+                in= url.openStream();
+                return BitmapFactory.decodeStream(in);
+            }
+            catch(IOException e) {
+                Log.e(LOG_TAG, "Couldn't retrieve image content from url " + url, e);
+                return null;
+            }
+            finally
+            {
+                if(in != null)
+                {
+                    try
+                    {
+                        in.close();
+                    }
+                    catch (IOException e) {
+                        Log.e(LOG_TAG, "Couldn't close stream of " + url, e);
+                    }
+                }
+            }
+        }
+
+        @Override
+        protected void onPostExecute(Bitmap bitmap) {
+            this.view.setImageBitmap(bitmap);
+            this.view.setVisibility(View.VISIBLE);
+        }
 
         private final ImageView view;
         private Uri uri;

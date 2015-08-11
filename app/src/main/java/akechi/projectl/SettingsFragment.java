@@ -11,10 +11,12 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
 import android.support.v4.content.LocalBroadcastManager;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Toast;
 
@@ -26,6 +28,7 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
+import java.io.File;
 import java.util.List;
 
 public class SettingsFragment
@@ -70,11 +73,62 @@ public class SettingsFragment
     {
         final View v= inflater.inflate(R.layout.fragment_settings, container, false);
 
+        this.iconCacheEnabledView= (CheckBox)v.findViewById(R.id.iconCacheCheck);
         this.roomIdView= (EditText)v.findViewById(R.id.roomIdText);
         this.saveButton= (Button)v.findViewById(R.id.saveButton);
         this.saveButton.setOnClickListener(this);
 
         this.loadSettings();
+
+        {
+            v.findViewById(R.id.clearCacheButton).setOnClickListener(new View.OnClickListener(){
+                @Override
+                public void onClick(View v)
+                {
+                    final AppContext appContext= (AppContext)SettingsFragment.this.getActivity().getApplicationContext();
+                    final File iconCacheDir= appContext.getIconCacheDir();
+                    if(!iconCacheDir.isDirectory())
+                    {
+                        Toast.makeText(appContext, "Cleared", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    Log.i("SettingsFragment", "clear dir " + iconCacheDir.getAbsolutePath());
+                    if(this.deleteRecursive(iconCacheDir))
+                    {
+                        Toast.makeText(appContext, "Cleared", Toast.LENGTH_SHORT).show();
+                    }
+                    else
+                    {
+                        Toast.makeText(appContext, "Didn't clear", Toast.LENGTH_SHORT).show();
+                    }
+                }
+
+                private boolean deleteRecursive(File file)
+                {
+                    if(file.isDirectory())
+                    {
+                        final File[] children= file.listFiles();
+                        if(children == null)
+                        {
+                            return false;
+                        }
+                        for(final File child : children)
+                        {
+                            if(!this.deleteRecursive(child))
+                            {
+                                return false;
+                            }
+                        }
+                        return true;
+                    }
+                    else
+                    {
+                        return file.delete();
+                    }
+                }
+            });
+        }
 
         return v;
     }
@@ -83,8 +137,12 @@ public class SettingsFragment
     public void onClick(View v)
     {
         final AppContext appContext= (AppContext)this.getActivity().getApplicationContext();
+        // general settings
+        {
+            appContext.setIconCacheEnabled(this.iconCacheEnabledView.isChecked());
+        }
+        // account settings
         final Account account= appContext.getAccount();
-
         {
             final String ids= this.roomIdView.getText().toString();
             final Iterable<String> roomIds= Iterables.filter(
@@ -112,6 +170,9 @@ public class SettingsFragment
     private void loadSettings()
     {
         final AppContext appContext= (AppContext)this.getActivity().getApplicationContext();
+        // general settings
+        this.iconCacheEnabledView.setChecked(appContext.isIconCacheEnabled());
+        // account settings
         final Account account= appContext.getAccount();
         if(account != null)
         {
@@ -120,6 +181,7 @@ public class SettingsFragment
         }
     }
 
+    private CheckBox iconCacheEnabledView;
     private EditText roomIdView;
     private Button saveButton;
 

@@ -3,6 +3,8 @@ package akechi.projectl;
 import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.app.Application;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.util.Log;
@@ -17,6 +19,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -107,6 +110,34 @@ public class AppContext
         manager.setUserData(account, "roomIdList", value);
     }
 
+    public boolean isIconCacheEnabled()
+    {
+        final Boolean oldVar= this.iconCacheEnabled;
+        if(oldVar != null)
+        {
+            return oldVar;
+        }
+        final SharedPreferences prefs= this.getSharedPreferences("prefs", Context.MODE_PRIVATE);
+        final boolean value= prefs.getBoolean("iconCacheEnabled", false);
+        this.iconCacheEnabled= value;
+        return value;
+    }
+
+    public void setIconCacheEnabled(boolean value)
+    {
+        final SharedPreferences prefs= this.getSharedPreferences("prefs", Context.MODE_PRIVATE);
+        prefs.edit()
+            .putBoolean("iconCacheEnabled", value)
+            .commit()
+        ;
+        this.iconCacheEnabled= value;
+    }
+
+    public File getIconCacheDir()
+    {
+        return new File(this.getCacheDir(), "icons");
+    }
+
     public LingrClient getLingrClient()
     {
         return lingrFactory.newLingrClient();
@@ -115,4 +146,6 @@ public class AppContext
     private static final LingrClientFactory lingrFactory= LingrClientFactory.newLingrClientFactory(AndroidHttp.newCompatibleTransport());
 
     private String accountName;
+
+    private Boolean iconCacheEnabled;
 }
