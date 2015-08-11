@@ -37,6 +37,16 @@ public final class Event
         }
     }
 
+    public static final class Reload
+    {
+        public static final String ACTION= Reload.class.getCanonicalName();
+
+        private Reload()
+        {
+            throw new AssertionError();
+        }
+    }
+
     private Event()
     {
         throw new AssertionError();

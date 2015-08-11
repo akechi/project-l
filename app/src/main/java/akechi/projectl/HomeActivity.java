@@ -257,6 +257,7 @@ public class HomeActivity
     @Override
     public boolean onCreateOptionsMenu(Menu menu)
     {
+        menu.add(Menu.NONE, MENU_ITEM_RELOAD, Menu.NONE, "Reload");
         menu.add(Menu.NONE, MENU_ITEM_PREFERENCE, Menu.NONE, "Settings");
         menu.add(Menu.NONE, MENU_ITEM_APP_INFO, Menu.NONE, "App Info");
 
@@ -279,6 +280,12 @@ public class HomeActivity
     {
         switch(item.getItemId())
         {
+            case MENU_ITEM_RELOAD:{
+                final Intent intent= new Intent(Event.Reload.ACTION);
+                final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getApplicationContext());
+                lbMan.sendBroadcast(intent);
+                return true;
+            }
             case MENU_ITEM_PREFERENCE:{
                 final Intent intent= new Intent(this, SettingsActivity.class);
                 this.startActivity(intent);
@@ -412,9 +419,10 @@ public class HomeActivity
         private final Map<Integer, Fragment> fragments= Maps.newHashMap();
     }
 
-    private static final int MENU_ITEM_PREFERENCE= 1;
-    private static final int MENU_ITEM_APP_INFO= 2;
-    private static final int MENU_ITEM_ACCOUNT= 3;
+    private static final int MENU_ITEM_RELOAD= 1;
+    private static final int MENU_ITEM_PREFERENCE= 2;
+    private static final int MENU_ITEM_APP_INFO= 3;
+    private static final int MENU_ITEM_ACCOUNT= 4;
 
     private List<BroadcastReceiver> receivers= Lists.newLinkedList();
 }

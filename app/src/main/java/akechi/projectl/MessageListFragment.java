@@ -118,6 +118,25 @@ public class MessageListFragment
             lbMan.registerReceiver(receiver, ifilter);
             this.receivers.add(receiver);
         }
+        {
+            final IntentFilter ifilter= new IntentFilter(Event.Reload.ACTION);
+            final BroadcastReceiver receiver= new BroadcastReceiver(){
+                @Override
+                public void onReceive(Context context, Intent intent)
+                {
+                    final AppContext appContext= (AppContext)MessageListFragment.this.getActivity().getApplicationContext();
+                    final Account account= appContext.getAccount();
+                    final String roomId= appContext.getRoomId(account);
+                    if(Strings.isNullOrEmpty(roomId))
+                    {
+                        return;
+                    }
+                    MessageListFragment.this.onRoomSelected(roomId);
+                }
+            };
+            lbMan.registerReceiver(receiver, ifilter);
+            this.receivers.add(receiver);
+        }
     }
 
     @Override
