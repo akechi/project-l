@@ -67,16 +67,6 @@ public class CometService
     {
         super.onCreate();
 
-        this.notifMan= NotificationManagerCompat.from(this.getApplicationContext());
-        final Notification notif= new NotificationCompat.Builder(this)
-            .setSmallIcon(R.drawable.icon_logo)
-            .setContentTitle("ProjectL ...started")
-            .setContentInfo("Info")
-            .setContentIntent(PendingIntent.getActivity(this, 0, new Intent(this, HomeActivity.class), 0))
-            .build()
-        ;
-        this.notifMan.notify(0, notif);
-
         this.loader= this.newSubscribeLoader();
 
         final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getApplicationContext());
