@@ -17,6 +17,13 @@ import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 
+import com.google.api.client.extensions.android.http.AndroidHttp;
+import com.google.api.client.http.GenericUrl;
+import com.google.api.client.http.HttpRequest;
+import com.google.api.client.http.HttpRequestFactory;
+import com.google.api.client.http.HttpResponse;
+import com.google.api.client.http.HttpTransport;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -52,7 +59,7 @@ public class CachedImageView
     @Override
     public void setImageURI(Uri uri) {
         final String scheme= uri.getScheme();
-        if("http".equals(scheme))
+        if("http".equals(scheme) || "https".equals(scheme))
         {
             this.setVisibility(View.INVISIBLE);
             final AppContext appContext= (AppContext)this.getContext().getApplicationContext();
@@ -138,7 +145,10 @@ public class CachedImageView
             InputStream in= null;
             try
             {
-                in= url.openStream();
+                final HttpRequestFactory requestFactory= transport.createRequestFactory();
+                final HttpRequest request= requestFactory.buildGetRequest(new GenericUrl(url));
+                final HttpResponse response= request.execute();
+                in= response.getContent();
                 final Bitmap bitmap= BitmapFactory.decodeStream(in);
                 OutputStream out= null;
                 try
@@ -224,23 +234,19 @@ public class CachedImageView
 
         @Override
         protected Bitmap doInBackground(Void... params) {
-            final URL url;
-            try{
-                url= new URL(this.uri.toString());
-            }
-            catch(MalformedURLException e)
-            {
-                return null;
-            }
-
             InputStream in= null;
             try
             {
-                in= url.openStream();
+                Log.i("NoCacheImageLoader", "uri = " + this.uri);
+                final HttpRequestFactory requestFactory= transport.createRequestFactory();
+                final HttpRequest request= requestFactory.buildGetRequest(new GenericUrl(this.uri.toString()));
+                final HttpResponse response= request.execute();
+                Log.i("NoCacheImageLoader", "status code = " + response.getStatusCode());
+                in= response.getContent();
                 return BitmapFactory.decodeStream(in);
             }
             catch(IOException e) {
-                Log.e(LOG_TAG, "Couldn't retrieve image content from url " + url, e);
+                Log.e(LOG_TAG, "Couldn't retrieve image content from url " + this.uri, e);
                 return null;
             }
             finally
@@ -252,7 +258,7 @@ public class CachedImageView
                         in.close();
                     }
                     catch (IOException e) {
-                        Log.e(LOG_TAG, "Couldn't close stream of " + url, e);
+                        Log.e(LOG_TAG, "Couldn't close stream of " + this.uri, e);
                     }
                 }
             }
@@ -269,4 +275,6 @@ public class CachedImageView
     }
 
     private static final String LOG_TAG= CachedImageView.class.getSimpleName();
+
+    private static final HttpTransport transport= AndroidHttp.newCompatibleTransport();
 }
