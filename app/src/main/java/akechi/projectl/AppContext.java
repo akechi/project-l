@@ -118,7 +118,7 @@ public class AppContext
             return oldVar;
         }
         final SharedPreferences prefs= this.getSharedPreferences("prefs", Context.MODE_PRIVATE);
-        final boolean value= prefs.getBoolean("iconCacheEnabled", false);
+        final boolean value= prefs.getBoolean("iconCacheEnabled", true);
         this.iconCacheEnabled= value;
         return value;
     }
