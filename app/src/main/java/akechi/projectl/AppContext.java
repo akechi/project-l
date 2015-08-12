@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.support.v7.app.ActionBar;
 import android.util.Log;
 
 import com.google.api.client.extensions.android.http.AndroidHttp;
@@ -31,6 +32,56 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class AppContext
     extends Application
 {
+    public static enum ActionBarMode
+    {
+        DEFAULT
+        {
+            @Override
+            public void applyActionBar(Context ctx, ActionBar bar)
+            {
+                bar.setDisplayShowHomeEnabled(true);
+                bar.setDisplayShowCustomEnabled(true);
+                bar.setDisplayUseLogoEnabled(true);
+                bar.setLogo(R.drawable.icon_logo);
+                bar.setIcon(R.drawable.icon_logo);
+            }
+        },
+        CURRENT_ROOM
+        {
+            @Override
+            public void applyActionBar(Context ctx, ActionBar bar)
+            {
+                bar.setDisplayShowHomeEnabled(true);
+                bar.setDisplayShowCustomEnabled(true);
+                bar.setDisplayUseLogoEnabled(true);
+                bar.setLogo(R.drawable.icon_logo);
+                bar.setIcon(R.drawable.icon_logo);
+
+                final AppContext appContext= (AppContext)ctx.getApplicationContext();
+                final Account account= appContext.getAccount();
+                if(Iterables.size(appContext.getAccounts()) <= 1)
+                {
+                    bar.setTitle(appContext.getRoomId(account));
+                }
+                else
+                {
+                    bar.setTitle(String.format("%s / %s", appContext.getRoomId(account), account.name));
+                }
+            }
+        },
+        HIDDEN
+        {
+            @Override
+            public void applyActionBar(Context ctx, ActionBar bar)
+            {
+                bar.hide();
+            }
+        },
+        ;
+
+        public abstract void applyActionBar(Context ctx, ActionBar bar);
+    }
+
     public Iterable<Account> getAccounts()
     {
         final AccountManager manager= AccountManager.get(this);
@@ -138,6 +189,29 @@ public class AppContext
         return new File(this.getCacheDir(), "icons");
     }
 
+    public ActionBarMode getActionBarMode()
+    {
+        final ActionBarMode oldVar= this.actionBarMode;
+        if(oldVar != null)
+        {
+            return oldVar;
+        }
+        final SharedPreferences prefs= this.getSharedPreferences("prefs", Context.MODE_PRIVATE);
+        final ActionBarMode value= ActionBarMode.valueOf(prefs.getString("actionBarMode", ActionBarMode.DEFAULT.name()));
+        this.actionBarMode= value;
+        return value;
+    }
+
+    public void setActionBarMode(ActionBarMode value)
+    {
+        final SharedPreferences prefs= this.getSharedPreferences("prefs", Context.MODE_PRIVATE);
+        prefs.edit()
+            .putString("actionBarMode", value.name())
+            .commit()
+        ;
+        this.actionBarMode= value;
+    }
+
     public LingrClient getLingrClient()
     {
         return lingrFactory.newLingrClient();
@@ -148,4 +222,6 @@ public class AppContext
     private String accountName;
 
     private Boolean iconCacheEnabled;
+
+    private ActionBarMode actionBarMode;
 }

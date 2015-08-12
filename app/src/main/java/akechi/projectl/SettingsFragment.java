@@ -18,6 +18,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.RadioGroup;
 import android.widget.Toast;
 
 import com.google.api.client.repackaged.com.google.common.base.Strings;
@@ -73,6 +74,7 @@ public class SettingsFragment
     {
         final View v= inflater.inflate(R.layout.fragment_settings, container, false);
 
+        this.actionBarMode= (RadioGroup)v.findViewById(R.id.actionBarModeRadioGroup);
         this.iconCacheEnabledView= (CheckBox)v.findViewById(R.id.iconCacheCheck);
         this.roomIdView= (EditText)v.findViewById(R.id.roomIdText);
         this.saveButton= (Button)v.findViewById(R.id.saveButton);
@@ -81,49 +83,37 @@ public class SettingsFragment
         this.loadSettings();
 
         {
-            v.findViewById(R.id.clearCacheButton).setOnClickListener(new View.OnClickListener(){
+            v.findViewById(R.id.clearCacheButton).setOnClickListener(new View.OnClickListener() {
                 @Override
-                public void onClick(View v)
-                {
-                    final AppContext appContext= (AppContext)SettingsFragment.this.getActivity().getApplicationContext();
-                    final File iconCacheDir= appContext.getIconCacheDir();
-                    if(!iconCacheDir.isDirectory())
-                    {
+                public void onClick(View v) {
+                    final AppContext appContext = (AppContext) SettingsFragment.this.getActivity().getApplicationContext();
+                    final File iconCacheDir = appContext.getIconCacheDir();
+                    if (!iconCacheDir.isDirectory()) {
                         Toast.makeText(appContext, "Cleared", Toast.LENGTH_SHORT).show();
                         return;
                     }
 
                     Log.i("SettingsFragment", "clear dir " + iconCacheDir.getAbsolutePath());
-                    if(this.deleteRecursive(iconCacheDir))
-                    {
+                    if (this.deleteRecursive(iconCacheDir)) {
                         Toast.makeText(appContext, "Cleared", Toast.LENGTH_SHORT).show();
-                    }
-                    else
-                    {
+                    } else {
                         Toast.makeText(appContext, "Didn't clear", Toast.LENGTH_SHORT).show();
                     }
                 }
 
-                private boolean deleteRecursive(File file)
-                {
-                    if(file.isDirectory())
-                    {
-                        final File[] children= file.listFiles();
-                        if(children == null)
-                        {
+                private boolean deleteRecursive(File file) {
+                    if (file.isDirectory()) {
+                        final File[] children = file.listFiles();
+                        if (children == null) {
                             return false;
                         }
-                        for(final File child : children)
-                        {
-                            if(!this.deleteRecursive(child))
-                            {
+                        for (final File child : children) {
+                            if (!this.deleteRecursive(child)) {
                                 return false;
                             }
                         }
                         return true;
-                    }
-                    else
-                    {
+                    } else {
                         return file.delete();
                     }
                 }
@@ -138,6 +128,24 @@ public class SettingsFragment
     {
         final AppContext appContext= (AppContext)this.getActivity().getApplicationContext();
         // general settings
+        {
+            final int modeId= this.actionBarMode.getCheckedRadioButtonId();
+            switch(modeId)
+            {
+                case R.id.modeDefaultRadio:{
+                    appContext.setActionBarMode(AppContext.ActionBarMode.DEFAULT);
+                    break;
+                }
+                case R.id.modeCurrentRoomRadio:{
+                    appContext.setActionBarMode(AppContext.ActionBarMode.CURRENT_ROOM);
+                    break;
+                }
+                case R.id.modeHiddenRadio:{
+                    appContext.setActionBarMode(AppContext.ActionBarMode.HIDDEN);
+                    break;
+                }
+            }
+        }
         {
             appContext.setIconCacheEnabled(this.iconCacheEnabledView.isChecked());
         }
@@ -171,6 +179,26 @@ public class SettingsFragment
     {
         final AppContext appContext= (AppContext)this.getActivity().getApplicationContext();
         // general settings
+        {
+            final AppContext.ActionBarMode mode= appContext.getActionBarMode();
+            switch(mode)
+            {
+                case DEFAULT:{
+                    this.actionBarMode.check(R.id.modeDefaultRadio);
+                    break;
+                }
+                case CURRENT_ROOM:{
+                    this.actionBarMode.check(R.id.modeCurrentRoomRadio);
+                    break;
+                }
+                case HIDDEN:{
+                    this.actionBarMode.check(R.id.modeHiddenRadio);
+                    break;
+                }
+                default:
+                    throw new AssertionError("Unknown ActionBarMode " + mode);
+            }
+        }
         this.iconCacheEnabledView.setChecked(appContext.isIconCacheEnabled());
         // account settings
         final Account account= appContext.getAccount();
@@ -181,6 +209,7 @@ public class SettingsFragment
         }
     }
 
+    private RadioGroup actionBarMode;
     private CheckBox iconCacheEnabledView;
     private EditText roomIdView;
     private Button saveButton;

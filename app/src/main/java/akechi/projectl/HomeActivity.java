@@ -103,12 +103,8 @@ public class HomeActivity
         }
         this.onPageSelected(pager.getCurrentItem());
 
-        final ActionBar bar= this.getSupportActionBar();
-        bar.setDisplayShowHomeEnabled(true);
-        bar.setDisplayShowCustomEnabled(true);
-        bar.setDisplayUseLogoEnabled(true);
-        bar.setLogo(R.drawable.icon_logo);
-        bar.setIcon(R.drawable.icon_logo);
+        // Setup ActionBar
+        appContext.getActionBarMode().applyActionBar(appContext, this.getSupportActionBar());
 
         final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getApplicationContext());
         {
@@ -132,6 +128,19 @@ public class HomeActivity
                 {
                     final String roomId= intent.getStringExtra(Event.RoomChange.KEY_ROOM_ID);
                     HomeActivity.this.onRoomSelected(roomId);
+                }
+            };
+            lbMan.registerReceiver(receiver, ifilter);
+            this.receivers.add(receiver);
+        }
+        {
+            final IntentFilter ifilter= new IntentFilter(Event.PreferenceChange.ACTION);
+            final BroadcastReceiver receiver= new BroadcastReceiver(){
+                @Override
+                public void onReceive(Context context, Intent intent)
+                {
+                    final AppContext appContext= (AppContext)HomeActivity.this.getApplicationContext();
+                    appContext.getActionBarMode().applyActionBar(appContext, HomeActivity.this.getSupportActionBar());
                 }
             };
             lbMan.registerReceiver(receiver, ifilter);
@@ -327,6 +336,10 @@ public class HomeActivity
                     }
                     this.onPageSelected(pager.getCurrentItem());
                 }
+                // apply ActionBar
+                {
+                    appContext.getActionBarMode().applyActionBar(appContext, this.getSupportActionBar());
+                }
                 // trigger event
                 {
                     final Intent intent= new Intent(Event.AccountChange.ACTION);
@@ -347,6 +360,8 @@ public class HomeActivity
 
         final ViewPager pager= (ViewPager)this.findViewById(R.id.pager);
         pager.setCurrentItem(SwipeSwitcher.POS_ROOM, true);
+
+        appContext.getActionBarMode().applyActionBar(appContext, this.getSupportActionBar());
     }
 
     @Override
