@@ -213,10 +213,17 @@ public class CometService
                 {
                     return super.onLoadInBackground();
                 }
+                catch(LingrException e)
+                {
+                    Log.e("CometService", "Oops, restarting service...", e);
+                    CometService.this.loader.abandon();
+                    CometService.this.loader= CometService.this.newSubscribeLoader();
+                    CometService.this.scheduleNext();
+                    return null;
+                }
                 finally
                 {
                     CometService.this.scheduleNext();
-                    return null;
                 }
             }
         };
