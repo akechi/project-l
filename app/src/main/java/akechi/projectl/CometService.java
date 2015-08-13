@@ -213,17 +213,25 @@ public class CometService
                 {
                     return super.onLoadInBackground();
                 }
-                catch(LingrException e)
+                finally
+                {
+                    CometService.this.scheduleNext();
+                }
+            }
+
+            @Override
+            protected void onLoadingFailed(Throwable e)
+            {
+                if(e instanceof LingrException)
                 {
                     Log.e("CometService", "Oops, restarting service...", e);
                     CometService.this.loader.abandon();
                     CometService.this.loader= CometService.this.newSubscribeLoader();
                     CometService.this.scheduleNext();
-                    return null;
                 }
-                finally
+                else
                 {
-                    CometService.this.scheduleNext();
+                    super.onLoadingFailed(e);
                 }
             }
         };

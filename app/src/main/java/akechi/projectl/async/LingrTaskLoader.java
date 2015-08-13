@@ -81,8 +81,7 @@ public abstract class LingrTaskLoader<R>
         }
         catch(Exception e)
         {
-            Log.e("LingrTaskLoader", "Loading failed", e);
-            this.showMessage("Oh, my god");
+            this.onLoadingFailed(e);
             return null;
         }
     }
@@ -107,6 +106,19 @@ public abstract class LingrTaskLoader<R>
                 Toast.makeText(ctx, text, Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    protected void onLoadingFailed(Throwable e)
+    {
+        Log.e("LingrTaskLoader", "Loading failed", e);
+        if(e instanceof LingrException)
+        {
+            this.showMessage("Lingr error: " + e.getMessage());
+        }
+        else
+        {
+            this.showMessage("Oh, my god");
+        }
     }
 
     private long getWaitTimeMillis(int nretries)
