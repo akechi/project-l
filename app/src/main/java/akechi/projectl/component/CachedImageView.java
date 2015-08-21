@@ -58,6 +58,12 @@ public class CachedImageView
 
     @Override
     public void setImageURI(Uri uri) {
+        if(uri.equals(this.shownUri))
+        {
+            return;
+        }
+        this.shownUri= uri;
+
         final String scheme= uri.getScheme();
         if("http".equals(scheme) || "https".equals(scheme))
         {
@@ -277,4 +283,6 @@ public class CachedImageView
     private static final String LOG_TAG= CachedImageView.class.getSimpleName();
 
     private static final HttpTransport transport= AndroidHttp.newCompatibleTransport();
+
+    private Uri shownUri;
 }
