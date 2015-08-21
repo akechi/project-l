@@ -134,15 +134,17 @@ public class CometService
                         if(mentioned)
                         {
                             final Notification notif= new NotificationCompat.Builder(CometService.this)
-                                .setSmallIcon(R.drawable.icon_logo)
-                                .setContentTitle("ProjectL")
-                                .setContentText(message.getRoom())
+                                .setSmallIcon(R.drawable.icon_notif_star)
+                                .setContentTitle("Found the highlighted message")
+                                .setContentText("Room: " + message.getRoom())
                                 .setSubText(message.getText())
-                                .setContentInfo(message.getNickname())
+                                .setContentInfo("From: " + message.getNickname())
                                 .setTicker(DateFormat.getDateTimeInstance().format(new Date(new DateTime(message.getTimestamp()).getValue())))
                                 .build()
                             ;
-                            CometService.this.notifMan.notify(0, notif);
+                            NotificationManagerCompat.from(CometService.this.getApplicationContext())
+                                .notify(0, notif)
+                            ;
                         }
                     }
                 }
@@ -326,8 +328,6 @@ public class CometService
             Log.i("CometService", "" + message);
         }
     }
-
-    private NotificationManagerCompat notifMan;
 
     private long counter;
 
