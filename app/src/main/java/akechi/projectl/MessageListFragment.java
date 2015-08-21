@@ -551,6 +551,8 @@ public class MessageListFragment
         {
             if(!this.enabled)
             {
+                this.scrollStart= -1;
+                this.prevTime= 0;
                 return;
             }
 
@@ -564,11 +566,11 @@ public class MessageListFragment
             else
             {
                 final int scrolled= firstVisibleItem - this.scrollStart;
-                if(scrolled >= 20)
+                if(scrolled >= 15)
                 {
                     this.onHighSpeed(Direction.DOWN);
                 }
-                else if(scrolled <= 20)
+                if(scrolled <= -15)
                 {
                     this.onHighSpeed(Direction.UP);
                 }
