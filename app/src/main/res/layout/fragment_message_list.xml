@@ -16,4 +16,19 @@
             android:id="@+id/messageListView"
             />
     </android.support.v4.widget.SwipeRefreshLayout>
+
+    <akechi.projectl.component.GhostButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/goDownButton"
+        android:layout_gravity="center_horizontal|bottom"
+        android:visibility="gone" />
+
+    <akechi.projectl.component.GhostButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/goUpButton"
+        android:layout_gravity="center_horizontal|top"
+        android:visibility="gone" />
+
 </FrameLayout>

@@ -2,12 +2,18 @@ package akechi.projectl;
 
 import android.accounts.Account;
 import android.accounts.AccountManager;
+import android.app.ActionBar;
+import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -18,16 +24,25 @@ import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
 import android.support.v4.content.LocalBroadcastManager;
+import android.support.v4.util.Pair;
+import android.support.v4.widget.PopupWindowCompat;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.util.Log;
 import android.view.ContextMenu;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.AlphaAnimation;
+import android.view.animation.Animation;
+import android.view.animation.TranslateAnimation;
+import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
+import android.widget.FrameLayout;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -48,6 +63,7 @@ import java.io.IOException;
 import java.text.DateFormat;
 import java.text.DateFormatSymbols;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -56,6 +72,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import akechi.projectl.async.LingrTaskLoader;
+import akechi.projectl.component.GhostButton;
 import jp.michikusa.chitose.lingr.Archive;
 import jp.michikusa.chitose.lingr.Events;
 import jp.michikusa.chitose.lingr.LingrClient;
@@ -163,6 +180,47 @@ public class MessageListFragment
         this.swipeRefreshLayout.setOnRefreshListener(this);
         this.messageView.setAdapter(new MessageAdapter(this.getActivity(), Collections.<Message>emptyList()));
         this.registerForContextMenu(this.messageView);
+
+        {
+            final ListView messageView= this.messageView;
+            final GhostButton downButton= (GhostButton)view.findViewById(R.id.goDownButton);
+            final GhostButton upButton= (GhostButton)view.findViewById(R.id.goUpButton);
+            downButton.setImageResource(android.R.drawable.ic_media_next);
+            upButton.setImageResource(android.R.drawable.ic_media_previous);
+            downButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    final int bottomPos = messageView.getCount() - 1;
+                    messageView.smoothScrollToPosition(bottomPos);
+                }
+            });
+            upButton.setOnClickListener(new View.OnClickListener(){
+                @Override
+                public void onClick(View v)
+                {
+                    messageView.smoothScrollToPosition(0);
+                }
+            });
+            this.messageView.setOnScrollListener(new MeasuringScrollListener() {
+                @Override
+                public void onHighSpeed(Direction direction) {
+                    switch (direction) {
+                        case DOWN:
+                            downButton.show();
+                            break;
+                        case UP:
+                            upButton.show();
+                            break;
+                    }
+                }
+
+                @Override
+                public void onStopped() {
+                    downButton.hide();
+                    upButton.hide();
+                }
+            });
+        }
 
         return view;
     }
@@ -473,6 +531,81 @@ public class MessageListFragment
         }
 
         private final Supplier<Message> oldestMessageSupplier;
+    }
+
+    private static abstract class MeasuringScrollListener
+        implements AbsListView.OnScrollListener
+    {
+        public static enum Direction
+        {
+            UP,
+            DOWN,
+            ;
+        }
+
+        public abstract void onHighSpeed(Direction direction);
+        public abstract void onStopped();
+
+        @Override
+        public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount)
+        {
+            if(!this.enabled)
+            {
+                return;
+            }
+
+            // when scroll down 30 items while 1 second
+            final long now= System.currentTimeMillis();
+            if(TimeUnit.MILLISECONDS.toSeconds(now - this.prevTime) > 1)
+            {
+                this.scrollStart= firstVisibleItem;
+                this.prevTime= now;
+            }
+            else
+            {
+                final int scrolled= firstVisibleItem - this.scrollStart;
+                if(scrolled >= 20)
+                {
+                    this.onHighSpeed(Direction.DOWN);
+                }
+                else if(scrolled <= 20)
+                {
+                    this.onHighSpeed(Direction.UP);
+                }
+            }
+        }
+
+        @Override
+        public void onScrollStateChanged(AbsListView view, int scrollState)
+        {
+            switch(scrollState)
+            {
+                case ListView.OnScrollListener.SCROLL_STATE_FLING:{
+                    Log.i("scroll", "scrollState = SCROLL_STATE_FLING");
+                    this.enabled= true;
+                    break;
+                }
+                case ListView.OnScrollListener.SCROLL_STATE_IDLE:{
+                    this.enabled= false;
+                    Log.i("scroll", "scrollState = SCROLL_STATE_IDLE");
+                    this.onStopped();
+                    break;
+                }
+                case ListView.OnScrollListener.SCROLL_STATE_TOUCH_SCROLL:{
+                    Log.i("scroll", "scrollState = SCROLL_STATE_TOUCH_SCROLL");
+                    break;
+                }
+                default:{
+                    Log.i("scroll", String.format("scrollState = %d", scrollState));
+                    break;
+                }
+            }
+        }
+
+        private boolean enabled;
+        private int scrollStart;
+        private long prevTime;
+
     }
 
     private static final int LOADER_SHOW_ROOM= 0;
