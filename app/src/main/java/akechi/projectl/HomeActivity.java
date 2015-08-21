@@ -52,7 +52,7 @@ import jp.michikusa.chitose.lingr.Events;
 
 public class HomeActivity
     extends AppCompatActivity
-    implements CometService.OnCometEventListener, ViewPager.OnPageChangeListener
+    implements CometService.OnCometEventListener
 {
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -91,7 +91,6 @@ public class HomeActivity
         }
         final Account account= appContext.getAccount();
         final ViewPager pager= (ViewPager)this.findViewById(R.id.pager);
-        pager.addOnPageChangeListener(this);
         pager.setAdapter(new SwipeSwitcher(this.getSupportFragmentManager()));
         if(account != null && !Strings.isNullOrEmpty(appContext.getRoomId(account)))
         {
@@ -101,7 +100,6 @@ public class HomeActivity
         {
             pager.setCurrentItem(SwipeSwitcher.POS_ROOM_LIST);
         }
-        this.onPageSelected(pager.getCurrentItem());
 
         // Setup ActionBar
         appContext.getActionBarMode().applyActionBar(appContext, this.getSupportActionBar());
@@ -149,52 +147,6 @@ public class HomeActivity
 
         final Intent service= new Intent(this, CometService.class);
         this.startService(service);
-    }
-
-    @Override
-    public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels)
-    {
-    }
-
-    @Override
-    public void onPageScrollStateChanged(int state)
-    {
-    }
-
-    @Override
-    public void onPageSelected(int position)
-    {
-        final TextView whenceView= (TextView)this.findViewById(R.id.whenceView);
-        final AppContext appContext= (AppContext)this.getApplicationContext();
-        switch(position)
-        {
-            case SwipeSwitcher.POS_ROOM:{
-                final Account account= appContext.getAccount();
-                final String roomId= appContext.getRoomId(account);
-                if(Iterables.size(appContext.getAccounts()) <= 1)
-                {
-                    whenceView.setText(Strings.isNullOrEmpty(roomId)
-                        ? "You're not in the room"
-                        : "You're in " + roomId
-                    );
-                }
-                else
-                {
-                    whenceView.setText(Strings.isNullOrEmpty(roomId)
-                        ? String.format("You're %s, not in the room", account.name)
-                        : String.format("You're %s, in %s", account.name, roomId)
-                    );
-                }
-                break;
-            }
-            case SwipeSwitcher.POS_ROOM_LIST:{
-                final Account account= appContext.getAccount();
-                whenceView.setText(String.format("Hi %s, choose a room", account.name));
-                break;
-            }
-            default:
-                throw new AssertionError("Unknown page position: " + position);
-        }
     }
 
     @Override
@@ -334,7 +286,6 @@ public class HomeActivity
                     {
                         pager.setCurrentItem(SwipeSwitcher.POS_ROOM);
                     }
-                    this.onPageSelected(pager.getCurrentItem());
                 }
                 // apply ActionBar
                 {
