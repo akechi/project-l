@@ -17,6 +17,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.RadioGroup;
 import android.widget.Toast;
@@ -31,6 +32,8 @@ import com.google.common.collect.Lists;
 
 import java.io.File;
 import java.util.List;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 public class SettingsFragment
     extends Fragment
@@ -76,6 +79,8 @@ public class SettingsFragment
 
         this.actionBarMode= (RadioGroup)v.findViewById(R.id.actionBarModeRadioGroup);
         this.iconCacheEnabledView= (CheckBox)v.findViewById(R.id.iconCacheCheck);
+        this.backgroundServiceEnabledView= (CheckBox)v.findViewById(R.id.backgroundServiceEnabledCheck);
+        this.highlightPatternView= (EditText)v.findViewById(R.id.highlightPatternText);
         this.roomIdView= (EditText)v.findViewById(R.id.roomIdText);
         this.saveButton= (Button)v.findViewById(R.id.saveButton);
         this.saveButton.setOnClickListener(this);
@@ -119,6 +124,15 @@ public class SettingsFragment
                 }
             });
         }
+        {
+            this.backgroundServiceEnabledView.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener(){
+                @Override
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
+                {
+                    SettingsFragment.this.highlightPatternView.setEnabled(isChecked);
+                }
+            });
+        }
 
         return v;
     }
@@ -126,6 +140,30 @@ public class SettingsFragment
     @Override
     public void onClick(View v)
     {
+        // validate
+        {
+            boolean hasError= false;
+            try
+            {
+                final String patterns= this.highlightPatternView.getText().toString();
+                for(final String pattern : Splitter.on(System.getProperty("line.separator")).split(patterns))
+                {
+                    Pattern.compile(pattern);
+                }
+                this.highlightPatternView.setError(null);
+            }
+            catch(PatternSyntaxException e)
+            {
+                this.highlightPatternView.setError("Invalid regular expression");
+                hasError= true;
+            }
+
+            if(hasError)
+            {
+                return;
+            }
+        }
+
         final AppContext appContext= (AppContext)this.getActivity().getApplicationContext();
         // general settings
         {
@@ -148,6 +186,12 @@ public class SettingsFragment
         }
         {
             appContext.setIconCacheEnabled(this.iconCacheEnabledView.isChecked());
+        }
+        {
+            appContext.setBackgroundServiceEnabled(this.backgroundServiceEnabledView.isChecked());
+        }
+        {
+            appContext.setHighlightPattern(this.highlightPatternView.getText());
         }
         // account settings
         final Account account= appContext.getAccount();
@@ -200,6 +244,9 @@ public class SettingsFragment
             }
         }
         this.iconCacheEnabledView.setChecked(appContext.isIconCacheEnabled());
+        this.backgroundServiceEnabledView.setChecked(appContext.isBackgroundServiceEnabled());
+        this.highlightPatternView.setText(appContext.getHighlightPattern());
+        this.highlightPatternView.setEnabled(appContext.isBackgroundServiceEnabled());
         // account settings
         final Account account= appContext.getAccount();
         if(account != null)
@@ -211,6 +258,8 @@ public class SettingsFragment
 
     private RadioGroup actionBarMode;
     private CheckBox iconCacheEnabledView;
+    private CheckBox backgroundServiceEnabledView;
+    private EditText highlightPatternView;
     private EditText roomIdView;
     private Button saveButton;
 

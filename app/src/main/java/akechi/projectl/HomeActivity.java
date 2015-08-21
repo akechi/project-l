@@ -207,6 +207,14 @@ public class HomeActivity
     {
         super.onDestroy();
 
+        final AppContext appContext= (AppContext)this.getApplicationContext();
+        if(!appContext.isBackgroundServiceEnabled())
+        {
+            Log.i("HomeActivity", "stopService");
+            final Intent intent= new Intent(this, CometService.class);
+            this.stopService(intent);
+        }
+
         final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getApplicationContext());
         for(final BroadcastReceiver receiver : this.receivers)
         {

@@ -23,10 +23,13 @@ import com.google.common.collect.Iterables;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Objects;
+import java.util.regex.Pattern;
 
 import jp.michikusa.chitose.lingr.LingrClient;
 import jp.michikusa.chitose.lingr.LingrClientFactory;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class AppContext
@@ -212,6 +215,55 @@ public class AppContext
         this.actionBarMode= value;
     }
 
+    public boolean isBackgroundServiceEnabled()
+    {
+        final Boolean oldVar= this.backgroundServiceEnabled;
+        if(oldVar != null)
+        {
+            return oldVar;
+        }
+        final SharedPreferences prefs= this.getSharedPreferences("prefs", Context.MODE_PRIVATE);
+        final boolean value= prefs.getBoolean("backgroundServiceEnabled", true);
+        this.backgroundServiceEnabled= value;
+        return value;
+    }
+
+    public void setBackgroundServiceEnabled(boolean value)
+    {
+        final SharedPreferences prefs= this.getSharedPreferences("prefs", Context.MODE_PRIVATE);
+        prefs.edit()
+            .putBoolean("backgroundServiceEnabled", value)
+            .commit()
+        ;
+        this.backgroundServiceEnabled= value;
+    }
+
+    public String getHighlightPattern()
+    {
+        final String oldVar= this.highlightPattern;
+        if(oldVar != null)
+        {
+            return oldVar;
+        }
+        final SharedPreferences prefs= this.getSharedPreferences("prefs", Context.MODE_PRIVATE);
+        final String value= prefs.getString("highlightPattern", "");
+        this.highlightPattern= value;
+        return Strings.nullToEmpty(value);
+    }
+
+    public void setHighlightPattern(CharSequence value)
+    {
+        String sval= (value != null)
+            ? value.toString()
+            : "";
+        final SharedPreferences prefs= this.getSharedPreferences("prefs", Context.MODE_PRIVATE);
+        prefs.edit()
+            .putString("highlightPattern", sval)
+            .commit()
+        ;
+        this.highlightPattern= sval;
+    }
+
     public LingrClient getLingrClient()
     {
         return lingrFactory.newLingrClient();
@@ -224,4 +276,8 @@ public class AppContext
     private Boolean iconCacheEnabled;
 
     private ActionBarMode actionBarMode;
+
+    private Boolean backgroundServiceEnabled;
+
+    private String highlightPattern;
 }

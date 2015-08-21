@@ -26,6 +26,9 @@ import com.google.api.client.util.DateTime;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -39,6 +42,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import javax.annotation.Nullable;
 
@@ -113,14 +117,7 @@ public class CometService
                 public void onReceive(Context context, Intent intent)
                 {
                     final AppContext appContext= (AppContext)CometService.this.getApplicationContext();
-                    final Iterable<String> accountNames= Iterables.transform(appContext.getAccounts(), new Function<Account, String>(){
-                        @Override
-                        public String apply(Account input)
-                        {
-                            return Pattern.quote(input.name);
-                        }
-                    });
-                    final Pattern mentionPattern= Pattern.compile("@(?:" + Joiner.on('|').join(accountNames) + ")\\b");
+                    final Iterable<Pattern> patterns= this.buildPatterns(appContext);
                     final Events events= (Events)intent.getSerializableExtra("events");
                     for(final Events.Event event : events.getEvents())
                     {
@@ -130,8 +127,14 @@ public class CometService
                         }
 
                         final Room.Message message= event.getMessage();
-                        final boolean mentioned= mentionPattern.matcher(message.getText()).find();
-                        if(mentioned)
+                        final boolean found= Iterables.any(patterns, new Predicate<Pattern>(){
+                            @Override
+                            public boolean apply(Pattern input)
+                            {
+                                return input.matcher(message.getText()).find();
+                            }
+                        });
+                        if(found)
                         {
                             final Notification notif= new NotificationCompat.Builder(CometService.this)
                                 .setSmallIcon(R.drawable.icon_notif_star)
@@ -147,6 +150,34 @@ public class CometService
                             ;
                         }
                     }
+                }
+
+                private Iterable<Pattern> buildPatterns(AppContext ctx)
+                {
+                    final Iterable<String> patterns= Splitter.on(System.getProperty("line.separator")).split(ctx.getHighlightPattern());
+                    if(Iterables.isEmpty(patterns))
+                    {
+                        return null;
+                    }
+                    final Iterable<Pattern> transformed= Iterables.transform(patterns, new Function<String, Pattern>(){
+                        @Override
+                        public Pattern apply(String input)
+                        {
+                            if(Strings.isNullOrEmpty(input))
+                            {
+                                return null;
+                            }
+                            try
+                            {
+                                return Pattern.compile(input);
+                            }
+                            catch(PatternSyntaxException e)
+                            {
+                                return null;
+                            }
+                        }
+                    });
+                    return ImmutableList.copyOf(Iterables.filter(transformed, Predicates.notNull()));
                 }
             };
             lbMan.registerReceiver(receiver, ifilter);
