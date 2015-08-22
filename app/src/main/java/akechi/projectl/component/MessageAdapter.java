@@ -10,12 +10,16 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.google.api.client.util.DateTime;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import java.text.DateFormat;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.SortedSet;
 
 import akechi.projectl.AppContext;
 import akechi.projectl.R;
@@ -32,7 +36,7 @@ public class MessageAdapter
 
     public void insertHead(Collection<? extends Room.Message> messages)
     {
-        this.messages.addAll(0, messages);
+        this.messages.addAll(messages);
     }
 
     public void add(Room.Message e)
@@ -54,7 +58,7 @@ public class MessageAdapter
     @Override
     public Room.Message getItem(int position)
     {
-        return this.messages.get(position);
+        return Iterables.get(this.messages, position);
     }
 
     @Override
@@ -101,6 +105,12 @@ public class MessageAdapter
 
     private final Context context;
 
-    private final List<Room.Message> messages= Lists.newLinkedList();
+    private final SortedSet<Room.Message> messages= Sets.newTreeSet(new Comparator<Room.Message>(){
+        @Override
+        public int compare(Room.Message lhs, Room.Message rhs)
+        {
+            return lhs.getId().compareTo(rhs.getId());
+        }
+    });
 }
 
