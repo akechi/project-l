@@ -37,6 +37,8 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 import akechi.projectl.AppContext;
 import akechi.projectl.R;
@@ -71,11 +73,11 @@ public class CachedImageView
             final AppContext appContext= (AppContext)this.getContext().getApplicationContext();
             if(appContext.isIconCacheEnabled())
             {
-                new CacheableImageLoader(this, uri).execute();
+                new CacheableImageLoader(this, uri).executeOnExecutor(executor);
             }
             else
             {
-                new NoCacheImageLoader(this, uri).execute();
+                new NoCacheImageLoader(this, uri).executeOnExecutor(executor);
             }
         }
         else
@@ -287,6 +289,8 @@ public class CachedImageView
     private static final String LOG_TAG= CachedImageView.class.getSimpleName();
 
     private static final HttpTransport transport= AndroidHttp.newCompatibleTransport();
+
+    private static final Executor executor= Executors.newCachedThreadPool();
 
     private Uri shownUri;
 }
