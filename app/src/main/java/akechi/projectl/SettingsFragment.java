@@ -79,6 +79,7 @@ public class SettingsFragment
 
         this.actionBarMode= (RadioGroup)v.findViewById(R.id.actionBarModeRadioGroup);
         this.iconCacheEnabledView= (CheckBox)v.findViewById(R.id.iconCacheCheck);
+        this.inlineImageMode= (RadioGroup)v.findViewById(R.id.inlineImageModeRadioGroup);
         this.backgroundServiceEnabledView= (CheckBox)v.findViewById(R.id.backgroundServiceEnabledCheck);
         this.highlightPatternView= (EditText)v.findViewById(R.id.highlightPatternText);
         this.roomIdView= (EditText)v.findViewById(R.id.roomIdText);
@@ -125,10 +126,9 @@ public class SettingsFragment
             });
         }
         {
-            this.backgroundServiceEnabledView.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener(){
+            this.backgroundServiceEnabledView.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                 @Override
-                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
-                {
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                     SettingsFragment.this.highlightPatternView.setEnabled(isChecked);
                 }
             });
@@ -188,6 +188,24 @@ public class SettingsFragment
             appContext.setIconCacheEnabled(this.iconCacheEnabledView.isChecked());
         }
         {
+            final int modeId= this.inlineImageMode.getCheckedRadioButtonId();
+            switch(modeId)
+            {
+                case R.id.inlineImageAlwaysRadio:{
+                    appContext.setInlineImageMode(AppContext.InlineImageMode.ALWAYS);
+                    break;
+                }
+                case R.id.inlineImageWifiOnlyRadio:{
+                    appContext.setInlineImageMode(AppContext.InlineImageMode.WIFI_ONLY);
+                    break;
+                }
+                case R.id.inlineImageNeverRadio:{
+                    appContext.setInlineImageMode(AppContext.InlineImageMode.NEVER);
+                    break;
+                }
+            }
+        }
+        {
             appContext.setBackgroundServiceEnabled(this.backgroundServiceEnabledView.isChecked());
         }
         {
@@ -244,6 +262,26 @@ public class SettingsFragment
             }
         }
         this.iconCacheEnabledView.setChecked(appContext.isIconCacheEnabled());
+        {
+            final AppContext.InlineImageMode mode= appContext.getInlineImageMode();
+            switch(mode)
+            {
+                case ALWAYS:{
+                    this.inlineImageMode.check(R.id.inlineImageAlwaysRadio);
+                    break;
+                }
+                case WIFI_ONLY:{
+                    this.inlineImageMode.check(R.id.inlineImageWifiOnlyRadio);
+                    break;
+                }
+                case NEVER:{
+                    this.inlineImageMode.check(R.id.inlineImageNeverRadio);
+                    break;
+                }
+                default:
+                    throw new AssertionError("Unknown InlineImageMode " + mode);
+            }
+        }
         this.backgroundServiceEnabledView.setChecked(appContext.isBackgroundServiceEnabled());
         this.highlightPatternView.setText(appContext.getHighlightPattern());
         this.highlightPatternView.setEnabled(appContext.isBackgroundServiceEnabled());
@@ -258,6 +296,7 @@ public class SettingsFragment
 
     private RadioGroup actionBarMode;
     private CheckBox iconCacheEnabledView;
+    private RadioGroup inlineImageMode;
     private CheckBox backgroundServiceEnabledView;
     private EditText highlightPatternView;
     private EditText roomIdView;

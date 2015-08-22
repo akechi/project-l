@@ -156,6 +156,10 @@ public class CachedImageView
                 final HttpResponse response= request.execute();
                 in= response.getContent();
                 final Bitmap bitmap= BitmapFactory.decodeStream(in);
+                if(bitmap == null)
+                {
+                    return null;
+                }
                 OutputStream out= null;
                 try
                 {

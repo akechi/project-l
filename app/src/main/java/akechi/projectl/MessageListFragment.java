@@ -38,6 +38,7 @@ import android.view.ViewGroup;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.view.animation.TranslateAnimation;
+import android.webkit.WebView;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
@@ -73,6 +74,7 @@ import java.util.concurrent.TimeUnit;
 
 import akechi.projectl.async.LingrTaskLoader;
 import akechi.projectl.component.GhostButton;
+import akechi.projectl.component.MessageAdapter;
 import jp.michikusa.chitose.lingr.Archive;
 import jp.michikusa.chitose.lingr.Events;
 import jp.michikusa.chitose.lingr.LingrClient;
@@ -387,86 +389,6 @@ public class MessageListFragment
                 this.messageView.smoothScrollByOffset(this.messageView.getCount() - 1);
             }
         }
-    }
-
-    public static final class MessageAdapter
-        extends BaseAdapter
-    {
-        public MessageAdapter(Context context, List<? extends Message> messages)
-        {
-            this.context = context;
-            this.messages.addAll(messages);
-        }
-
-        public void insertHead(Collection<? extends Message> messages)
-        {
-            this.messages.addAll(0, messages);
-        }
-
-        public void add(Message e)
-        {
-            this.messages.add(e);
-        }
-
-        public void clear()
-        {
-            this.messages.clear();
-        }
-
-        @Override
-        public int getCount()
-        {
-            return this.messages.size();
-        }
-
-        @Override
-        public Message getItem(int position)
-        {
-            return this.messages.get(position);
-        }
-
-        @Override
-        public long getItemId(int position)
-        {
-            return position;
-        }
-
-        @Override
-        public View getView(int position, View convertView, ViewGroup parent)
-        {
-            final View view;
-            if(convertView == null)
-            {
-                final LayoutInflater inflater= (LayoutInflater)this.context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-                view= inflater.inflate(R.layout.custom_message, null);
-            }
-            else
-            {
-                view= convertView;
-            }
-
-            final Message data= this.getItem(position);
-            final ImageView iconView= (ImageView)view.findViewById(R.id.iconView);
-            iconView.setImageURI(Uri.parse(data.getIconUrl()));
-
-            final TextView nicknameView= (TextView)view.findViewById(R.id.nicknameView);
-            nicknameView.setText(data.getNickname());
-
-            final TextView timestampView= (TextView)view.findViewById(R.id.timestampView);
-            {
-                final Date timestamp= new Date(new DateTime(data.getTimestamp()).getValue());
-                timestampView.setText(DateFormat.getDateTimeInstance().format(timestamp));
-            }
-
-            final TextView textView= (TextView)view.findViewById(R.id.textView);
-            textView.setText(data.getText());
-
-            return view;
-        }
-
-        private final Context context;
-
-        private final List<Message> messages = new LinkedList<>();
     }
 
     private static final class MessageListLoader

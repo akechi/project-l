@@ -5,13 +5,18 @@ import android.accounts.AccountManager;
 import android.app.Application;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.os.Parcel;
-import android.os.Parcelable;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.Uri;
+import android.os.AsyncTask;
 import android.support.v7.app.ActionBar;
-import android.util.Log;
+import android.text.style.URLSpan;
+import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import com.google.api.client.extensions.android.http.AndroidHttp;
-import com.google.api.client.http.apache.ApacheHttpTransport;
 import com.google.api.client.repackaged.com.google.common.base.Strings;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
@@ -23,9 +28,9 @@ import com.google.common.collect.Iterables;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Objects;
-import java.util.regex.Pattern;
 
+import akechi.projectl.async.InlineImageHandler;
+import akechi.projectl.component.CachedImageView;
 import jp.michikusa.chitose.lingr.LingrClient;
 import jp.michikusa.chitose.lingr.LingrClientFactory;
 
@@ -83,6 +88,46 @@ public class AppContext
         ;
 
         public abstract void applyActionBar(Context ctx, ActionBar bar);
+    }
+
+    public static enum InlineImageMode
+    {
+        ALWAYS
+        {
+            @Override
+            public void doWork(TextView view)
+            {
+                new InlineImageHandler(view);
+            }
+        },
+        WIFI_ONLY
+        {
+            @Override
+            public void doWork(TextView view)
+            {
+                final ConnectivityManager connMan= (ConnectivityManager)view.getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+                final NetworkInfo netInfo= connMan.getActiveNetworkInfo();
+                if(netInfo == null)
+                {
+                    return;
+                }
+                if((netInfo.getType() & ConnectivityManager.TYPE_WIFI) == ConnectivityManager.TYPE_WIFI)
+                {
+                    ALWAYS.doWork(view);
+                }
+            }
+        },
+        NEVER
+        {
+            @Override
+            public void doWork(TextView view)
+            {
+                // do nothing
+            }
+        },
+        ;
+
+        public abstract void doWork(TextView view);
     }
 
     public Iterable<Account> getAccounts()
@@ -215,6 +260,28 @@ public class AppContext
         this.actionBarMode= value;
     }
 
+    public InlineImageMode getInlineImageMode()
+    {
+        final InlineImageMode oldVar= this.inlineImageMode;
+        if(oldVar != null)
+        {
+            return oldVar;
+        }
+        final SharedPreferences prefs= this.getSharedPreferences("prefs", Context.MODE_PRIVATE);
+        final InlineImageMode value= InlineImageMode.valueOf(prefs.getString("inlineImageMode", InlineImageMode.NEVER.name()));
+        this.inlineImageMode= value;
+        return value;
+    }
+
+    public void setInlineImageMode(InlineImageMode value)
+    {
+        final SharedPreferences prefs= this.getSharedPreferences("prefs", Context.MODE_PRIVATE);
+        prefs.edit()
+            .putString("inlineImageMode", value.name())
+            .commit()
+        ;
+        this.inlineImageMode= value;
+    }
     public boolean isBackgroundServiceEnabled()
     {
         final Boolean oldVar= this.backgroundServiceEnabled;
@@ -276,6 +343,8 @@ public class AppContext
     private Boolean iconCacheEnabled;
 
     private ActionBarMode actionBarMode;
+
+    private InlineImageMode inlineImageMode;
 
     private Boolean backgroundServiceEnabled;
 
