@@ -10,6 +10,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.google.api.client.util.DateTime;
+import com.google.common.base.Objects;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -82,6 +83,11 @@ public class MessageAdapter
         }
 
         final Room.Message data= this.getItem(position);
+        if(Objects.equal(view.getTag(), data.getId()))
+        {
+            return view;
+        }
+        view.setTag(data.getId());
         final ImageView iconView= (ImageView)view.findViewById(R.id.iconView);
         iconView.setImageURI(Uri.parse(data.getIconUrl()));
 
