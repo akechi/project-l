@@ -7,6 +7,7 @@ import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
+import android.support.v4.util.LruCache;
 import android.support.v4.util.Pair;
 import android.text.BoringLayout;
 import android.text.Spannable;
@@ -23,11 +24,14 @@ import com.google.api.client.http.HttpRequest;
 import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.HttpResponse;
 import com.google.api.client.http.HttpTransport;
+import com.google.common.base.Objects;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Maps;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.WeakHashMap;
 
 public class InlineImageHandler
     extends AsyncTask<URLSpan, Void, Iterable<Pair<URLSpan, Bitmap>>>
@@ -95,7 +99,9 @@ public class InlineImageHandler
                 {
                     continue;
                 }
-                builder.add(Pair.create(span, this.loadBitmap(url)));
+                final Bitmap bitmap= this.loadBitmap(url);
+                bitmapCache.put(span.getURL(), bitmap);
+                builder.add(Pair.create(span, bitmap));
             }
             catch(IOException e)
             {
@@ -108,6 +114,14 @@ public class InlineImageHandler
 
     private Bitmap loadBitmap(GenericUrl url)
     {
+        {
+            final Bitmap bitmap= bitmapCache.get(url.toString());
+            if(bitmap != null)
+            {
+                return bitmap;
+            }
+        }
+
         HttpResponse response= null;
         try
         {
@@ -141,6 +155,14 @@ public class InlineImageHandler
     private boolean isImageType(GenericUrl url)
         throws IOException
     {
+        {
+            final String contentType= mimeCache.get(url.toString());
+            if(contentType != null)
+            {
+                return contentType.startsWith("image");
+            }
+        }
+
         final HttpRequestFactory factory= transport.createRequestFactory();
         HttpResponse response= null;
         try
@@ -148,6 +170,7 @@ public class InlineImageHandler
             final HttpRequest request= factory.buildHeadRequest(url);
             response= request.execute();
             final String contentType= Strings.nullToEmpty(response.getHeaders().getContentType());
+            mimeCache.put(url.toString(), contentType);
 
             return contentType.startsWith("image");
         }
@@ -161,6 +184,20 @@ public class InlineImageHandler
     }
 
     private static final HttpTransport transport= AndroidHttp.newCompatibleTransport();
+
+    private static final LruCache<String, String> mimeCache= new LruCache<>(1024);
+
+    private static final LruCache<String, Bitmap> bitmapCache= new LruCache<String, Bitmap>(8 * 1024 * 1024){
+        @Override
+        protected int sizeOf(String key, Bitmap value)
+        {
+            if(value == null)
+            {
+                return 1;
+            }
+            return value.getRowBytes() * value.getHeight();
+        }
+    };
 
     private final TextView view;
 }
