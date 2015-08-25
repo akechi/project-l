@@ -268,7 +268,7 @@ public class AppContext
             return oldVar;
         }
         final SharedPreferences prefs= this.getSharedPreferences("prefs", Context.MODE_PRIVATE);
-        final InlineImageMode value= InlineImageMode.valueOf(prefs.getString("inlineImageMode", InlineImageMode.NEVER.name()));
+        final InlineImageMode value= InlineImageMode.valueOf(prefs.getString("inlineImageMode", InlineImageMode.WIFI_ONLY.name()));
         this.inlineImageMode= value;
         return value;
     }
