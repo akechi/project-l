@@ -223,6 +223,17 @@ public class MessageListFragment
                 }
             });
         }
+        this.messageView.addOnLayoutChangeListener(new View.OnLayoutChangeListener(){
+            @Override
+            public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom)
+            {
+                final int distance= oldBottom - bottom;
+                if(distance > 0)
+                {
+                    MessageListFragment.this.messageView.smoothScrollBy(distance, (int) TimeUnit.MILLISECONDS.toMillis(50));
+                }
+            }
+        });
 
         return view;
     }
@@ -529,7 +540,6 @@ public class MessageListFragment
         private boolean enabled;
         private int scrollStart;
         private long prevTime;
-
     }
 
     private static final int LOADER_SHOW_ROOM= 0;
