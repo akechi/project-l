@@ -62,6 +62,16 @@ public class SayFragment
 
         this.getLoaderManager().initLoader(0, null, this);
 
+        // handle implicit intent
+        {
+            final Intent intent= this.getActivity().getIntent();
+            final String text= intent.getStringExtra(Intent.EXTRA_TEXT);
+            if(!Strings.isNullOrEmpty(text))
+            {
+                this.inputText.getText().append(text);
+            }
+        }
+
         return v;
     }
 
