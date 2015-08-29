@@ -187,8 +187,10 @@ public class MessageListFragment
             final ListView messageView= this.messageView;
             final GhostButton downButton= (GhostButton)view.findViewById(R.id.goDownButton);
             final GhostButton upButton= (GhostButton)view.findViewById(R.id.goUpButton);
-            downButton.setImageResource(android.R.drawable.ic_media_next);
-            upButton.setImageResource(android.R.drawable.ic_media_previous);
+            downButton.setImageResource(R.drawable.icon_fast_down);
+            downButton.setBackgroundColor(downButton.getResources().getColor(android.R.color.transparent));
+            upButton.setImageResource(R.drawable.icon_fast_up);
+            upButton.setBackgroundColor(upButton.getResources().getColor(android.R.color.transparent));
             downButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
