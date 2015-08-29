@@ -100,12 +100,16 @@ public class InlineImageHandler
                     continue;
                 }
                 final Bitmap bitmap= this.loadBitmap(url);
-                bitmapCache.put(span.getURL(), bitmap);
+                bitmapCache.put(span.getURL(), (bitmap != null)
+                    ? bitmap
+                    : BitmapFactory.decodeResource(this.view.getContext().getResources(), android.R.drawable.ic_delete)
+                );
                 builder.add(Pair.create(span, bitmap));
             }
             catch(IOException e)
             {
-                Log.e("ImageLoader", "Error", e);
+                Log.e("InlineImageHandler", "url: " + url);
+                Log.e("InlineImageHandler", "Error", e);
                 return Collections.emptyList();
             }
         }
