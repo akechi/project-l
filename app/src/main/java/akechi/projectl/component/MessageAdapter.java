@@ -11,6 +11,7 @@ import android.widget.TextView;
 
 import com.google.api.client.util.DateTime;
 import com.google.common.base.Objects;
+import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -115,7 +116,11 @@ public class MessageAdapter
         @Override
         public int compare(Room.Message lhs, Room.Message rhs)
         {
-            return lhs.getId().compareTo(rhs.getId());
+            return ComparisonChain.start()
+                .compare(new DateTime(lhs.getTimestamp()).getValue(), new DateTime(rhs.getTimestamp()).getValue())
+                .compare(lhs.getId(), rhs.getId())
+                .result()
+            ;
         }
     });
 }
