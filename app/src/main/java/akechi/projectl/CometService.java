@@ -10,11 +10,13 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.media.RingtoneManager;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.IInterface;
 import android.os.Parcel;
 import android.os.RemoteException;
+import android.os.Vibrator;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.content.Loader;
@@ -136,6 +138,10 @@ public class CometService
                         });
                         if(found)
                         {
+                            final Account account= appContext.getAccount();
+                            final Intent onClickIntent= new Intent(appContext, HomeActivity.class);
+                            final PendingIntent pendingIntent= PendingIntent.getActivity(appContext, 0, onClickIntent, PendingIntent.FLAG_ONE_SHOT);
+
                             final Notification notif= new NotificationCompat.Builder(CometService.this)
                                 .setSmallIcon(R.drawable.icon_notif_star)
                                 .setContentTitle("Found the highlighted message")
@@ -143,9 +149,13 @@ public class CometService
                                 .setSubText(message.getText())
                                 .setContentInfo("From: " + message.getNickname())
                                 .setTicker(DateFormat.getDateTimeInstance().format(new Date(new DateTime(message.getTimestamp()).getValue())))
+                                .setAutoCancel(true)
+                                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                                .setVibrate(new long[]{1000, 1000})
+                                .setContentIntent(pendingIntent)
                                 .build()
                             ;
-                            NotificationManagerCompat.from(CometService.this.getApplicationContext())
+                            NotificationManagerCompat.from(appContext)
                                 .notify(0, notif)
                             ;
                         }
