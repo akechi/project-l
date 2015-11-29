@@ -25,7 +25,10 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme"
         >
-        <activity android:name=".HomeActivity">
+        <activity
+            android:name=".HomeActivity"
+            android:windowSoftInputMode="stateHidden"
+            >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -36,7 +39,10 @@
                 <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
-        <activity android:name=".SettingsActivity" />
+        <activity
+            android:name=".SettingsActivity"
+            android:windowSoftInputMode="stateHidden"
+            />
         <activity android:name=".authenticator.LingrAuthenticatorActivity" />
         <service android:name=".authenticator.LingrAuthenticatorService">
             <intent-filter>
