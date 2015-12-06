@@ -20,6 +20,7 @@ public final class Event
     {
         public static final String ACTION= RoomChange.class.getCanonicalName();
         public static final String KEY_ROOM_ID= "roomId";
+        public static final String KEY_OLD_ROOM_ID= "oldRoomId";
 
         private RoomChange()
         {
@@ -42,6 +43,30 @@ public final class Event
         public static final String ACTION= Reload.class.getCanonicalName();
 
         private Reload()
+        {
+            throw new AssertionError();
+        }
+    }
+
+    public static final class OnNotificationTapped
+    {
+        public static final String ACTION= OnNotificationTapped.class.getCanonicalName();
+        public static final String KEY_ACCOUNT_NAME= "accountName";
+        public static final String KEY_ROOM_ID= "roomId";
+        public static final String KEY_MESSAGE_ID= "messageId";
+
+        private OnNotificationTapped()
+        {
+            throw new AssertionError();
+        }
+    }
+
+    public static final class FindMessage
+    {
+        public static final String ACTION= FindMessage.class.getCanonicalName();
+        public static final String KEY_MESSAGE_ID= "messageId";
+
+        private FindMessage()
         {
             throw new AssertionError();
         }

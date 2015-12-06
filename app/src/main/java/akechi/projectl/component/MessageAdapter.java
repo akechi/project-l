@@ -11,6 +11,7 @@ import android.widget.TextView;
 
 import com.google.api.client.util.DateTime;
 import com.google.common.base.Objects;
+import com.google.common.base.Strings;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -39,6 +40,23 @@ public class MessageAdapter
     public void insertHead(Collection<? extends Room.Message> messages)
     {
         this.messages.addAll(messages);
+    }
+
+    public void setUnreadMessageId(CharSequence messageId)
+    {
+        if(messageId == null)
+        {
+            this.unreadMessageId= null;
+        }
+        else
+        {
+            this.unreadMessageId= messageId.toString();
+        }
+    }
+
+    public Room.Message getLatestMessage()
+    {
+        return this.messages.last();
     }
 
     public void add(Room.Message e)
@@ -107,6 +125,21 @@ public class MessageAdapter
         final AppContext appContext= (AppContext)this.context.getApplicationContext();
         appContext.getInlineImageMode().doWork(textView);
 
+        final TextView separatorView= (TextView)view.findViewById(R.id.separatorTextView);
+        if(Strings.isNullOrEmpty(this.unreadMessageId))
+        {
+            separatorView.setVisibility(TextView.GONE);
+        }
+        else if(this.unreadMessageId.equals(data.getId()))
+        {
+            separatorView.setText("--- UNREAD MESSAGES FROM HERE ---");
+            separatorView.setVisibility(TextView.VISIBLE);
+        }
+        else
+        {
+            separatorView.setVisibility(TextView.GONE);
+        }
+
         return view;
     }
 
@@ -123,5 +156,6 @@ public class MessageAdapter
             ;
         }
     });
-}
 
+    private String unreadMessageId;
+}

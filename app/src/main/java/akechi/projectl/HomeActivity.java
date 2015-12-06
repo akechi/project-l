@@ -147,6 +147,12 @@ public class HomeActivity
 
         final Intent service= new Intent(this, CometService.class);
         this.startService(service);
+
+        // handle explicit intent
+        if(Event.OnNotificationTapped.ACTION.equals(this.getIntent().getAction()))
+        {
+            this.onNotificationTapped(this.getIntent());
+        }
     }
 
     @Override
@@ -267,14 +273,7 @@ public class HomeActivity
             }
             case MENU_ITEM_ACCOUNT:{
                 final AppContext appContext= (AppContext)this.getApplicationContext();
-                final String accountName= item.getTitle().toString();
-                final Optional<Account> account= Iterables.tryFind(appContext.getAccounts(), new Predicate<Account>(){
-                    @Override
-                    public boolean apply(Account input)
-                    {
-                        return input.name.equals(accountName);
-                    }
-                });
+                final Optional<Account> account= Iterables.tryFind(appContext.getAccounts(), new AccountNameEquals(item.getTitle().toString()));
                 if(!account.isPresent())
                 {
                     Toast.makeText(this, "Did you remove an account? Try again", Toast.LENGTH_SHORT).show();
@@ -342,6 +341,52 @@ public class HomeActivity
         }
     }
 
+    private void onNotificationTapped(Intent intent)
+    {
+        final String accountName= intent.getStringExtra(Event.OnNotificationTapped.KEY_ACCOUNT_NAME);
+        final String roomId= intent.getStringExtra(Event.OnNotificationTapped.KEY_ROOM_ID);
+        final String messageId= intent.getStringExtra(Event.OnNotificationTapped.KEY_MESSAGE_ID);
+        Log.i("notification tapped", "account name is " + accountName);
+        Log.i("notification tapped", "room id is " + roomId);
+        Log.i("notification tapped", "message id is " + messageId);
+
+        final AppContext appContext= (AppContext)this.getApplicationContext();
+        if(!appContext.getAccount().name.equals(accountName))
+        {
+            final Account account= Iterables.find(appContext.getAccounts(), new AccountNameEquals(accountName), null);
+            if(account == null)
+            {
+                Toast.makeText(this, "Sorry, cannot find a message", Toast.LENGTH_SHORT);
+                return;
+            }
+
+            Log.i("notification tapped", "change account");
+            appContext.setAccount(account);
+
+            final Intent event= new Intent(Event.AccountChange.ACTION);
+            event.putExtra(Event.AccountChange.KEY_ACCOUNT, accountName);
+            LocalBroadcastManager.getInstance(appContext).sendBroadcastSync(event);
+        }
+
+        final Account account= appContext.getAccount();
+        if(!roomId.equals(appContext.getRoomId(account)))
+        {
+            Log.i("notification tapped", "change room");
+            appContext.setRoomId(account, roomId);
+
+            final Intent event= new Intent(Event.RoomChange.ACTION);
+            event.putExtra(Event.RoomChange.KEY_ROOM_ID, roomId);
+            LocalBroadcastManager.getInstance(appContext).sendBroadcastSync(event);
+        }
+
+        {
+            Log.i("notification tapped", "find a message");
+            final Intent event= new Intent(Event.FindMessage.ACTION);
+            event.putExtra(Event.FindMessage.KEY_MESSAGE_ID, messageId);
+            LocalBroadcastManager.getInstance(appContext).sendBroadcast(event);
+        }
+    }
+
     public static final class SwipeSwitcher
         extends FragmentStatePagerAdapter
     {
@@ -391,6 +436,23 @@ public class HomeActivity
         }
 
         private final Map<Integer, Fragment> fragments= Maps.newHashMap();
+    }
+
+    private static final class AccountNameEquals
+        implements Predicate<Account>
+    {
+        public AccountNameEquals(CharSequence expects)
+        {
+            this.expects= expects.toString();
+        }
+
+        @Override
+        public boolean apply(Account input)
+        {
+            return this.expects.equals(input.name);
+        }
+
+        private final String expects;
     }
 
     private static final int MENU_ITEM_RELOAD= 1;

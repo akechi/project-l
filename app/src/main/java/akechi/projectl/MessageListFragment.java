@@ -94,6 +94,7 @@ public class MessageListFragment
 
         this.getLoaderManager().initLoader(LOADER_SHOW_ROOM, null, this);
         this.getLoaderManager().initLoader(LOADER_GET_ARCHIVE, null, this);
+        this.getLoaderManager().initLoader(LOADER_FIND_MESSAGE, null, this);
 
         final AppContext appContext= (AppContext)this.getActivity().getApplicationContext();
         final Account account= appContext.getAccount();
@@ -113,11 +114,10 @@ public class MessageListFragment
                 @Override
                 public void onReceive(Context context, Intent intent)
                 {
-                    final AppContext appContext1= (AppContext)MessageListFragment.this.getActivity().getApplicationContext();
-                    final Account account= appContext.getAccount();
-                    final String roomId= appContext.getRoomId(account);
+                    final String roomId= intent.getStringExtra(Event.RoomChange.KEY_ROOM_ID);
+                    final String oldRoomId= intent.getStringExtra(Event.RoomChange.KEY_OLD_ROOM_ID);
 
-                    MessageListFragment.this.onRoomSelected(roomId);
+                    MessageListFragment.this.onRoomSelected(roomId, oldRoomId);
                 }
             };
             lbMan.registerReceiver(receiver, ifilter);
@@ -130,8 +130,9 @@ public class MessageListFragment
                 public void onReceive(Context context, Intent intent)
                 {
                     final String roomId= intent.getStringExtra(Event.RoomChange.KEY_ROOM_ID);
+                    final String oldRoomId= intent.getStringExtra(Event.RoomChange.KEY_OLD_ROOM_ID);
 
-                    MessageListFragment.this.onRoomSelected(roomId);
+                    MessageListFragment.this.onRoomSelected(roomId, oldRoomId);
                 }
             };
             lbMan.registerReceiver(receiver, ifilter);
@@ -150,7 +151,21 @@ public class MessageListFragment
                     {
                         return;
                     }
-                    MessageListFragment.this.onRoomSelected(roomId);
+
+                    MessageListFragment.this.onRoomSelected(roomId, roomId);
+                }
+            };
+            lbMan.registerReceiver(receiver, ifilter);
+            this.receivers.add(receiver);
+        }
+        {
+            final IntentFilter ifilter= new IntentFilter(Event.FindMessage.ACTION);
+            final BroadcastReceiver receiver= new BroadcastReceiver(){
+                @Override
+                public void onReceive(Context context, Intent intent)
+                {
+                    final String messageId= intent.getStringExtra(Event.FindMessage.KEY_MESSAGE_ID);
+                    MessageListFragment.this.findMessage(messageId);
                 }
             };
             lbMan.registerReceiver(receiver, ifilter);
@@ -225,13 +240,11 @@ public class MessageListFragment
                 }
             });
         }
-        this.messageView.addOnLayoutChangeListener(new View.OnLayoutChangeListener(){
+        this.messageView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
             @Override
-            public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom)
-            {
-                final int distance= oldBottom - bottom;
-                if(distance > 0)
-                {
+            public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
+                final int distance = oldBottom - bottom;
+                if (distance > 0) {
                     MessageListFragment.this.messageView.smoothScrollBy(distance, (int) TimeUnit.MILLISECONDS.toMillis(50));
                 }
             }
@@ -240,12 +253,27 @@ public class MessageListFragment
         return view;
     }
 
-    private void onRoomSelected(CharSequence roomId)
+    private void onRoomSelected(CharSequence roomId, CharSequence oldRoomId)
     {
         Log.i("MessageListFragment", "On room selected " + roomId);
+        final AppContext appContext= (AppContext)this.getActivity().getApplicationContext();
         final MessageAdapter adapter= (MessageAdapter)this.messageView.getAdapter();
+        // mark unread
+        {
+            final Message latest= adapter.getLatestMessage();
+            if(latest != null && oldRoomId != null)
+            {
+                appContext.setUnreadMessageId(appContext.getAccount(), oldRoomId.toString(), latest.getId());
+            }
+            else if(oldRoomId != null)
+            {
+                appContext.setUnreadMessageId(appContext.getAccount(), oldRoomId.toString(), null);
+            }
+        }
         adapter.clear();
         adapter.notifyDataSetChanged();
+
+        adapter.setUnreadMessageId(appContext.getUnreadMessageId(appContext.getAccount(), roomId));
 
         this.swipeRefreshLayout.setRefreshing(true);
         this.getLoaderManager().getLoader(LOADER_SHOW_ROOM).forceLoad();
@@ -336,6 +364,21 @@ public class MessageListFragment
                 this.swipeRefreshLayout.setRefreshing(false);
                 break;
             }
+            case LOADER_FIND_MESSAGE:{
+                Log.i("find message", "load finished, messageId is " + this.findingMessageId);
+                if(data != null && !Iterables.isEmpty(data))
+                {
+                    final MessageAdapter adapter= (MessageAdapter)this.messageView.getAdapter();
+                    adapter.insertHead(Lists.newArrayList(data));
+                    adapter.notifyDataSetChanged();
+                    this.messageView.setSelection(Iterables.size(data));
+                }
+                if(this.findingMessageId != null)
+                {
+                    this.findMessage(this.findingMessageId);
+                }
+                break;
+            }
             default:
                 throw new AssertionError("Unknown loader id: " + loader.getId());
         }
@@ -348,6 +391,8 @@ public class MessageListFragment
         {
             case LOADER_SHOW_ROOM:
                 return new MessageListLoader(this.getActivity());
+            case LOADER_FIND_MESSAGE:
+                // fallthrough
             case LOADER_GET_ARCHIVE:
                 return new ArchiveLoader(this.getActivity(), new Supplier<Message>(){
                     @Override
@@ -402,6 +447,36 @@ public class MessageListFragment
                 this.messageView.smoothScrollByOffset(this.messageView.getCount() - 1);
             }
         }
+    }
+
+    private void findMessage(CharSequence messageId)
+    {
+        Log.i("find message", "called with messageId=" + messageId);
+        Log.i("find message", "message count is " + this.messageView.getCount());
+        final int nmessages= this.messageView.getCount();
+        for(int pos= 0; pos < nmessages; ++pos)
+        {
+            Log.i("find message", "pos=" + pos);
+            final Message message= (Message)this.messageView.getAdapter().getItem(pos);
+            if(messageId.toString().equals(message.getId()))
+            {
+                Log.i("find message", "found at pos=" + pos);
+                final Message separator= new Message();
+                separator.setId(message.getId());
+                separator.setTimestamp(message.getTimestamp());
+                separator.setText("----------");
+
+                final MessageAdapter adapter= (MessageAdapter)this.messageView.getAdapter();
+                adapter.add(separator);
+                adapter.notifyDataSetChanged();
+                return;
+            }
+        }
+
+        Log.i("find message", "not found, search more");
+        this.findingMessageId= messageId.toString();
+        this.getLoaderManager().getLoader(LOADER_FIND_MESSAGE).abandon();
+        this.getLoaderManager().getLoader(LOADER_FIND_MESSAGE).forceLoad();
     }
 
     private static final class MessageListLoader
@@ -546,10 +621,13 @@ public class MessageListFragment
 
     private static final int LOADER_SHOW_ROOM= 0;
     private static final int LOADER_GET_ARCHIVE= 1;
+    private static final int LOADER_FIND_MESSAGE= 2;
 
     private SwipeRefreshLayout swipeRefreshLayout;
 
     private ListView messageView;
 
     private final List<BroadcastReceiver> receivers= Lists.newLinkedList();
+
+    private String findingMessageId;
 }

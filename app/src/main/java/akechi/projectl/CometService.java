@@ -138,8 +138,12 @@ public class CometService
                         });
                         if(found)
                         {
-                            final Account account= appContext.getAccount();
                             final Intent onClickIntent= new Intent(appContext, HomeActivity.class);
+                            onClickIntent.setAction(Event.OnNotificationTapped.ACTION);
+                            onClickIntent.putExtra(Event.OnNotificationTapped.KEY_ACCOUNT_NAME, appContext.getAccount().name);
+                            onClickIntent.putExtra(Event.OnNotificationTapped.KEY_ROOM_ID, message.getRoom());
+                            onClickIntent.putExtra(Event.OnNotificationTapped.KEY_MESSAGE_ID, message.getId());
+
                             final PendingIntent pendingIntent= PendingIntent.getActivity(appContext, 0, onClickIntent, PendingIntent.FLAG_ONE_SHOT);
 
                             final Notification notif= new NotificationCompat.Builder(CometService.this)

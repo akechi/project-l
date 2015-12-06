@@ -7,13 +7,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.net.Uri;
-import android.os.AsyncTask;
 import android.support.v7.app.ActionBar;
-import android.text.style.URLSpan;
-import android.view.ViewGroup;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.google.api.client.extensions.android.http.AndroidHttp;
@@ -30,11 +24,9 @@ import java.util.Arrays;
 import java.util.Collections;
 
 import akechi.projectl.async.InlineImageHandler;
-import akechi.projectl.component.CachedImageView;
 import jp.michikusa.chitose.lingr.LingrClient;
 import jp.michikusa.chitose.lingr.LingrClientFactory;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class AppContext
@@ -329,6 +321,24 @@ public class AppContext
             .commit()
         ;
         this.highlightPattern= sval;
+    }
+
+    public String getUnreadMessageId(Account account, CharSequence roomId)
+    {
+        checkNotNull(account);
+        checkNotNull(roomId);
+
+        final AccountManager manager= AccountManager.get(this);
+        return manager.getUserData(account, "unreadMessageId." + roomId);
+    }
+
+    public void setUnreadMessageId(Account account, CharSequence roomId, CharSequence messageId)
+    {
+        checkNotNull(account);
+        checkNotNull(roomId);
+
+        final AccountManager manager= AccountManager.get(this);
+        manager.setUserData(account, "unreadMessageId." + roomId, messageId != null ? messageId.toString() : "");
     }
 
     public LingrClient getLingrClient()

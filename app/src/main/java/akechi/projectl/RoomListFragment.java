@@ -152,8 +152,13 @@ public class RoomListFragment
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         final CharSequence roomId= (CharSequence) this.listView.getAdapter().getItem(position);
 
+        final AppContext appContext= (AppContext)this.getActivity().getApplicationContext();
+        final Account account= appContext.getAccount();
+        final String oldRoomId= appContext.getRoomId(account);
+
         final Intent intent= new Intent(Event.RoomChange.ACTION);
         intent.putExtra(Event.RoomChange.KEY_ROOM_ID, roomId.toString());
+        intent.putExtra(Event.RoomChange.KEY_OLD_ROOM_ID, oldRoomId);
         final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getActivity().getApplicationContext());
         lbMan.sendBroadcast(intent);
     }
