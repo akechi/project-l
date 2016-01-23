@@ -1,4 +1,4 @@
-Project L [![Android App on Google Play](https://developer.android.com/images/brand/en_app_rgb_wo_45.png)](https://play.google.com/store/apps/details?id=akechi.projectl)
+Project L <a href="https://play.google.com/store/apps/details?id=akechi.projectl"><img alt="Get it on Google Play" src="https://play.google.com/intl/en_us/badges/images/apps/en-play-badge.png" width="150" /></a>
 ========================================================================================================================
 
 <font size="huge" color="red">This project has a name...
