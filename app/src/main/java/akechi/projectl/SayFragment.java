@@ -33,10 +33,12 @@ import com.google.api.client.repackaged.com.google.common.base.Strings;
 import com.google.common.base.Splitter;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Queues;
 
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.List;
+import java.util.Queue;
 import java.util.regex.Pattern;
 
 import akechi.projectl.async.LingrTaskLoader;
@@ -60,7 +62,8 @@ public class SayFragment
         this.sayButton.setOnClickListener(this);
         this.inputText.setOnKeyListener(this);
 
-        this.getLoaderManager().initLoader(0, null, this);
+        this.getLoaderManager().initLoader(LOADER_SAY_FROM_WIDGET, null, this);
+        this.getLoaderManager().initLoader(LOADER_SAY_FROM_TEXT, null, this);
 
         // handle implicit intent
         {
@@ -102,6 +105,20 @@ public class SayFragment
                     final String roomId= intent.getStringExtra(Event.RoomChange.KEY_ROOM_ID);
 
                     SayFragment.this.onRoomSelected(roomId);
+                }
+            };
+            lbMan.registerReceiver(receiver, ifilter);
+            this.receivers.add(receiver);
+        }
+        {
+            final IntentFilter ifilter= new IntentFilter(Event.PostMessage.ACTION);
+            final BroadcastReceiver receiver= new BroadcastReceiver(){
+                @Override
+                public void onReceive(Context context, Intent intent)
+                {
+                    final String text= intent.getStringExtra(Event.PostMessage.KEY_TEXT);
+
+                    SayFragment.this.say(text);
                 }
             };
             lbMan.registerReceiver(receiver, ifilter);
@@ -163,13 +180,24 @@ public class SayFragment
         }
     }
 
+    public void say(String text)
+    {
+        if(text == null)
+        {
+            return;
+        }
+
+        this.texts.add(text);
+        this.getLoaderManager().getLoader(LOADER_SAY_FROM_TEXT).forceLoad();
+    }
+
     @Override
     public void onClick(View v)
     {
         Log.i("SayFragment", "input area and say button are disabled");
         this.sayButton.setEnabled(false);
         this.inputText.setEnabled(false);
-        this.getLoaderManager().getLoader(0).forceLoad();
+        this.getLoaderManager().getLoader(LOADER_SAY_FROM_WIDGET).forceLoad();
     }
 
     private void onRoomSelected(CharSequence roomId)
@@ -182,18 +210,39 @@ public class SayFragment
     @Override
     public Loader<Room.Message> onCreateLoader(int id, Bundle args)
     {
-        return new MessagePostLoader(this.getActivity(), new Supplier<String>(){
-            @Override
-            public String get()
-            {
-                return inputText.getText().toString();
-            }
-        });
+        switch(id)
+        {
+            case LOADER_SAY_FROM_WIDGET:
+                return new MessagePostLoader(this.getActivity(), new Supplier<String>(){
+                    @Override
+                    public String get()
+                    {
+                        return inputText.getText().toString();
+                    }
+                });
+            case LOADER_SAY_FROM_TEXT:
+                return new MessagePostLoader(this.getActivity(), new Supplier<String>(){
+                    @Override
+                    public String get()
+                    {
+                        return texts.poll();
+                    }
+                });
+            default:
+                throw new AssertionError("Unknown loader id " + id);
+        }
     }
 
     @Override
     public void onLoadFinished(Loader<Room.Message> loader, Room.Message data)
     {
+        // TODO: graceful implementations
+        if(loader.getId() == LOADER_SAY_FROM_TEXT)
+        {
+            Toast.makeText(this.getActivity(), "Posted", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         try
         {
             if(data == null)
@@ -249,9 +298,13 @@ public class SayFragment
     }
 
     private static final LingrClientFactory lingrFactory= LingrClientFactory.newLingrClientFactory(AndroidHttp.newCompatibleTransport());
+    private static final int LOADER_SAY_FROM_WIDGET= 0;
+    private static final int LOADER_SAY_FROM_TEXT= 1;
 
     private EditText inputText;
     private Button sayButton;
+    // for LOADER_SAY_FROM_TEXT
+    private Queue<String> texts= Queues.newArrayDeque();
 
     private List<BroadcastReceiver> receivers= Lists.newLinkedList();
 }

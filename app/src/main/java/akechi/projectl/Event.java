@@ -72,6 +72,17 @@ public final class Event
         }
     }
 
+    public static final class PostMessage
+    {
+        public static final String ACTION= PostMessage.class.getCanonicalName();
+        public static final String KEY_TEXT= "text";
+
+        private PostMessage()
+        {
+            throw new AssertionError();
+        }
+    }
+
     private Event()
     {
         throw new AssertionError();

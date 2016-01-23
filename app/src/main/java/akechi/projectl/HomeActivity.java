@@ -2,39 +2,31 @@ package akechi.projectl;
 
 import android.accounts.Account;
 import android.accounts.AccountManager;
-import android.app.Dialog;
 import android.content.BroadcastReceiver;
-import android.content.ComponentName;
+import android.content.ContentValues;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.ServiceConnection;
 import android.content.SharedPreferences;
-import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.Bundle;
-import android.os.IBinder;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import android.provider.MediaStore;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentStatePagerAdapter;
-import android.support.v4.app.FragmentTransaction;
+import android.support.v4.content.Loader;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.view.ViewPager;
-import android.support.v7.app.ActionBar;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.ActionProvider;
-import android.view.ContextMenu;
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.SubMenu;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.TextView;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.google.api.client.repackaged.com.google.common.base.Strings;
@@ -44,10 +36,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-import java.text.DateFormat;
 import java.util.List;
 import java.util.Map;
 
+import akechi.projectl.async.GyazoUploader;
 import jp.michikusa.chitose.lingr.Events;
 
 public class HomeActivity
@@ -233,6 +225,7 @@ public class HomeActivity
     public boolean onCreateOptionsMenu(Menu menu)
     {
         menu.add(Menu.NONE, MENU_ITEM_RELOAD, Menu.NONE, "Reload");
+        menu.add(Menu.NONE, MENU_ITEM_PHOTO, Menu.NONE, "Post a photo(s)");
         menu.add(Menu.NONE, MENU_ITEM_PREFERENCE, Menu.NONE, "Settings");
         menu.add(Menu.NONE, MENU_ITEM_APP_INFO, Menu.NONE, "App Info");
 
@@ -269,6 +262,44 @@ public class HomeActivity
             case MENU_ITEM_APP_INFO:{
                 final DialogFragment dialog= new AppInfoFragment();
                 dialog.show(this.getSupportFragmentManager(), "dialog");
+                return true;
+            }
+            case MENU_ITEM_PHOTO:{
+                final HomeActivity that= this;
+                new AlertDialog.Builder(this)
+                    .setItems(new CharSequence[]{"Take a photo", "Pick a photo"}, new DialogInterface.OnClickListener(){
+                        @Override
+                        public void onClick(DialogInterface dialog, int which)
+                        {
+                            switch(which)
+                            {
+                                // Take a photo
+                                case 0:{
+                                    final Intent intent= new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                                    // same rule for standard camera app
+                                    {
+                                        final String filename= System.currentTimeMillis() + ".jpg";
+                                        final ContentValues values= new ContentValues();
+                                        values.put(MediaStore.Images.Media.TITLE, filename);
+                                        values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+                                        that.temporaryCameraStoreUri= that.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+                                    }
+                                    intent.putExtra(MediaStore.EXTRA_OUTPUT, that.temporaryCameraStoreUri);
+                                    HomeActivity.this.startActivityForResult(intent, REQUEST_CODE_TAKE_PHOTO);
+                                    break;
+                                }
+                                // Pick a photo
+                                case 1:{
+                                    final Intent intent= new Intent(Intent.ACTION_PICK);
+                                    intent.setType("image/*");
+                                    HomeActivity.this.startActivityForResult(intent, REQUEST_CODE_CHOOSE_PHOTO);
+                                    break;
+                                }
+                            }
+                        }
+                    })
+                    .show()
+                ;
                 return true;
             }
             case MENU_ITEM_ACCOUNT:{
@@ -309,6 +340,74 @@ public class HomeActivity
             }
         }
         return false;
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data)
+    {
+        if(RESULT_OK != resultCode)
+        {
+            return;
+        }
+
+        switch(requestCode)
+        {
+            case REQUEST_CODE_TAKE_PHOTO:
+                // For xperia 2.1
+                if(data.getData() == null)
+                {
+                    data.setData(this.temporaryCameraStoreUri);
+                }
+                // fallthrough
+            case REQUEST_CODE_CHOOSE_PHOTO:{
+                Log.i("gyazo", String.format("data=%s, extras=%s", data.getData(), data.getExtras()));
+
+                final ImageView view= new ImageView(this);
+                view.setImageURI(data.getData());
+                view.setAdjustViewBounds(true);
+
+                final Uri dataUri= data.getData();
+                new AlertDialog.Builder(this)
+                    .setView(view)
+                    .setPositiveButton("OK", new DialogInterface.OnClickListener(){
+                        @Override
+                        public void onClick(DialogInterface dialog, int which)
+                        {
+                            final GyazoUploader loader= new GyazoUploader(HomeActivity.this, dataUri);
+                            loader.registerListener(0, new Loader.OnLoadCompleteListener<Uri>(){
+                                @Override
+                                public void onLoadComplete(Loader<Uri> loader, Uri data)
+                                {
+                                    HomeActivity.this.onGyazoUploaded(data);
+                                }
+                            });
+                            loader.forceLoad();
+                        }
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show()
+                ;
+                break;
+            }
+            case REQUEST_CODE_GYAZO_UPLOAD:{
+                break;
+            }
+        }
+    }
+
+    private void onGyazoUploaded(Uri uri)
+    {
+        if(uri == null)
+        {
+            Toast.makeText(this, "Oops, failed to upload image to gyazo", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        final LocalBroadcastManager lbMan= LocalBroadcastManager.getInstance(this.getApplicationContext());
+        final Intent intent= new Intent(Event.PostMessage.ACTION);
+        intent.putExtra(Event.PostMessage.KEY_TEXT, uri.toString());
+
+        lbMan.sendBroadcast(intent);
     }
 
     private void onRoomSelected(CharSequence roomId)
@@ -459,6 +558,13 @@ public class HomeActivity
     private static final int MENU_ITEM_PREFERENCE= 2;
     private static final int MENU_ITEM_APP_INFO= 3;
     private static final int MENU_ITEM_ACCOUNT= 4;
+    private static final int MENU_ITEM_PHOTO= 5;
+
+    private static final int REQUEST_CODE_TAKE_PHOTO= 1;
+    private static final int REQUEST_CODE_CHOOSE_PHOTO= 2;
+    private static final int REQUEST_CODE_GYAZO_UPLOAD= 3;
+
+    private Uri temporaryCameraStoreUri;
 
     private List<BroadcastReceiver> receivers= Lists.newLinkedList();
 }
