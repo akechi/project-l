@@ -10,6 +10,7 @@ import android.net.NetworkInfo;
 import android.support.v7.app.ActionBar;
 import android.widget.TextView;
 
+import com.deploygate.sdk.DeployGate;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.repackaged.com.google.common.base.Strings;
 import com.google.common.base.Functions;
@@ -344,6 +345,14 @@ public class AppContext
     public LingrClient getLingrClient()
     {
         return lingrFactory.newLingrClient();
+    }
+
+    @Override
+    public void onCreate()
+    {
+        super.onCreate();
+
+        DeployGate.install(this);
     }
 
     private static final LingrClientFactory lingrFactory= LingrClientFactory.newLingrClientFactory(AndroidHttp.newCompatibleTransport());
