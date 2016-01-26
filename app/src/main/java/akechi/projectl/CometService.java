@@ -129,6 +129,16 @@ public class CometService
                         }
 
                         final Room.Message message= event.getMessage();
+                        // exclude message by myself
+                        if(appContext.getAccount().name.equals(message.getSpeakerId()))
+                        {
+                            continue;
+                        }
+                        // exclude message by bot
+                        if("bot".equals(message.getType()))
+                        {
+                            continue;
+                        }
                         final boolean found= Iterables.any(patterns, new Predicate<Pattern>(){
                             @Override
                             public boolean apply(Pattern input)
