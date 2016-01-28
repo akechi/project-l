@@ -2,6 +2,7 @@ package akechi.projectl.component;
 
 import android.content.Context;
 import android.net.Uri;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,6 +23,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.SortedSet;
 
 import akechi.projectl.AppContext;
@@ -56,7 +58,15 @@ public class MessageAdapter
 
     public Room.Message getLatestMessage()
     {
-        return this.messages.last();
+        try
+        {
+            return this.messages.last();
+        }
+        catch(NoSuchElementException e)
+        {
+            Log.e(this.getClass().getSimpleName(), "Suppressing exception", e);
+            return null;
+        }
     }
 
     public void add(Room.Message e)
