@@ -1,0 +1,431 @@
+swagger: '2.0'
+info:
+  title: Lingr API
+  description: ''
+  version: "2016-02-24"
+# the domain of the service
+host: lingr.com
+# array of all schemes that your API supports
+schemes:
+  - http
+# will be prefixed to all paths
+basePath: /api
+consumes:
+  - application/json
+produces:
+  - application/json
+paths:
+  /session/create:
+    post:
+      summary: Login as a specific user
+      description: ''
+      parameters:
+        - name: user
+          description: ''
+          in: formData
+          required: true
+          type: string
+        - name: password
+          description: ''
+          in: formData
+          required: true
+          type: string
+        - name: app_key
+          description: ''
+          in: formData
+          required: false
+          type: string
+      tags:
+        - session
+      responses:
+        200:
+          description: A session object is created by this request.
+          schema:
+            $ref: '#/definitions/Session'
+  /session/verify:
+    get:
+      summary: Verify current session is still valid.
+      description: ''
+      parameters:
+        - name: session
+          description: session value was returned from /session/create response.
+          in: query
+          required: true
+          type: string
+      tags:
+        - session
+      responses:
+        200:
+          description: A session object was created by /session/create request.
+          schema:
+            $ref: '#/definitions/Session'
+  /session/destroy:
+    post:
+      summary: Logout from current session.
+      description: ''
+      parameters:
+        - name: session
+          description: session value was returned from /session/create response.
+          in: formData
+          required: true
+          type: string
+      tags:
+        - session
+      responses:
+        200:
+          description: ''
+          schema:
+            type: object
+            properties:
+              status: { type: string }
+  /user/get_rooms:
+    get:
+      summary: List of rooms which are joined by user.
+      description: ''
+      parameters:
+        - name: session
+          in: query
+          type: string
+          required: true
+      tags:
+        - user
+      responses:
+        200:
+          description: ''
+          schema:
+            $ref: '#/definitions/RoomList'
+  /room/show:
+    get:
+      summary: Get latest messages (up to 30) and room members.
+      description: ''
+      parameters:
+        - name: session
+          in: query
+          type: string
+          description: Current session id.
+        - name: room
+          in: query
+          type: string
+          description: Room id.
+      tags:
+        - room
+      responses:
+        200:
+          description: Room information.
+          schema:
+            $ref: '#/definitions/Room'
+  /room/get_archives:
+    get:
+      summary: Get archive messages.
+      description: ''
+      parameters:
+        - name: session
+          in: query
+          required: true
+          type: string
+          description: ''
+        - name: room
+          in: query
+          required: true
+          type: string
+          description: ''
+        - name: before
+          in: query
+          required: true
+          type: string
+          description: ''
+        - name: limit
+          in: query
+          required: true
+          type: string
+          description: ''
+      tags:
+        - room
+      responses:
+        200:
+          description: Archived messages.
+          schema:
+            $ref: '#/definitions/Archive'
+  /room/subscribe:
+    post:
+      summary: Subscribe room's events.
+      description: ''
+      parameters:
+        - name: session
+          in: query
+          required: true
+          type: string
+          description: ''
+        - name: room
+          in: query
+          required: true
+          type: string
+          description: ''
+        - name: reset
+          in: query
+          required: true
+          type: boolean
+          description: ''
+      tags:
+        - room
+        - event
+      responses:
+        200:
+          description: Subscription information.
+          schema:
+            type: object
+            properties:
+              status: { type: string }
+              counter: { type: integer, format: int64 }
+  /room/unsubscribe:
+    post:
+      summary: Subscribe room's events.
+      description: ''
+      parameters:
+        - name: session
+          in: query
+          required: true
+          type: string
+          description: ''
+        - name: room
+          in: query
+          required: true
+          type: string
+          description: ''
+      tags:
+        - room
+        - event
+      responses:
+        200:
+          description: Subscription information.
+          schema:
+            type: object
+            properties:
+              status: { type: string }
+              counter: { type: integer, format: int64 }
+  /room/say:
+    post:
+      summary: Post a message to a specific room.
+      description: ''
+      parameters:
+        - name: session
+          in: formData
+          required: true
+          type: string
+          description: ''
+        - name: room
+          in: formData
+          required: true
+          type: string
+          description: ''
+        - name: nickname
+          in: formData
+          required: true
+          type: string
+          description: ''
+        - name: text
+          in: formData
+          required: true
+          type: string
+          description: ''
+      tags:
+        - room
+      responses:
+        200:
+          description: A message just posted.
+          schema:
+            type: object
+            properties:
+              status: { type: string }
+              message:
+                $ref: '#/definitions/Message'
+  /favorite/add:
+    post:
+      summary: Mark a message as favorite.
+      description: ''
+      parameters:
+        - name: session
+          in: formData
+          required: true
+          type: string
+          description: ''
+        - name: message
+          in: formData
+          required: true
+          type: string
+          description: 'Message ID'
+      tags:
+        - favorite
+      responses:
+        200:
+          description: A message just faved.
+          schema:
+            type: object
+            properties:
+              status: { type: string }
+              message:
+                $ref: '#/definitions/Message'
+  /favorite/remove:
+    post:
+      summary: Unmark a message from favorite.
+      description: ''
+      parameters:
+        - name: session
+          in: formData
+          required: true
+          type: string
+          description: ''
+        - name: message
+          in: formData
+          required: true
+          type: string
+          description: 'Message ID'
+      tags:
+        - favorite
+      responses:
+        200:
+          description: A message just faved.
+          schema:
+            type: object
+            properties:
+              status: { type: string }
+              message:
+                $ref: '#/definitions/Message'
+  /event/observe:
+    get:
+      summary: Wait some events.
+      description: |
+        note: only this API uses port 8080.
+      parameters:
+        - name: session
+          in: query
+          required: true
+          type: string
+        - name: counter
+          in: query
+          required: true
+          type: integer
+          format: int64
+      tags:
+        - event
+      responses:
+        200:
+          description: A message just faved.
+          schema:
+            type: object
+            properties:
+              status: { type: string }
+              counter: { type: integer, format: int64 }
+              events:
+                type: array
+                items:
+                  $ref: '#/definitions/Event'
+definitions:
+  Session:
+    type: object
+    properties:
+      status: { type: string }
+      nickname: { type: string }
+      public_id: { type: string }
+      session: { type: string }
+      user:
+        type: object
+        properties:
+          name: { type: string }
+          username: { type: string }
+  RoomList:
+    type: object
+    properties:
+      status: { type: string }
+      rooms:
+        type: array
+        items:
+          type: string
+  Room:
+    type: object
+    properties:
+      status: { type: string }
+      rooms:
+        type: array
+        items:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string }
+            blurb: { type: string }
+            faved_message_ids: { type: array, items: { type: string} }
+            is_public: { type: boolean }
+            roster:
+              $ref: '#/definitions/Roster'
+            messages:
+              type: array
+              items:
+                $ref: '#/definitions/Message'
+  Roster:
+    type: object
+    properties:
+      bots:
+        type: array
+        items:
+          $ref: '#/definitions/Bot'
+      members:
+        type: array
+        items:
+          $ref: '#/definitions/Member'
+  Bot:
+    type: object
+    properties:
+      id: { type: string }
+      name: { type: string }
+      icon_url: { type: string }
+      status: { type: string }
+  Member:
+    type: object
+    properties:
+      name: { type: string }
+      username: { type: string }
+      icon_url: { type: string }
+      is_online: { type: boolean }
+      is_owner: { type: boolean }
+      pokeable: { type: boolean }
+      timestamp: { type: string }
+  Message:
+    type: object
+    properties:
+      icon_url: { type: string }
+      id: { type: string }
+      local_id: { type: string }
+      nickname: { type: string }
+      public_session_id: { type: string }
+      room: { type: string }
+      speaker_id: { type: string }
+      text: { type: string }
+      timestamp: { type: string }
+      type: { type: string }
+  Archive:
+    type: object
+    properties:
+      status: { type: string }
+      messages:
+        type: array
+        items:
+          $ref: '#/definitions/Message'
+  Event:
+    type: object
+    properties:
+      event_id: { type: string }
+      presence:
+        $ref: '#/definitions/Presence'
+      message:
+        $ref: '#/definitions/Message'
+  Presence:
+    type: object
+    properties:
+      icon_url: { type: string }
+      nickname: { type: string }
+      public_session_id: { type: string }
+      room: { type: string }
+      status: { type: string }
+      text: { type: string }
+      timestamp: { type: string }
+      username: { type: string }
