@@ -273,7 +273,16 @@ public class MessageListFragment
         adapter.clear();
         adapter.notifyDataSetChanged();
 
-        adapter.setUnreadMessageId(appContext.getUnreadMessageId(appContext.getAccount(), roomId));
+        // XXX: NPEs for ``roomId'' are happen periodically, this is just a work-around.
+        if(roomId != null)
+        {
+            adapter.setUnreadMessageId(appContext.getUnreadMessageId(appContext.getAccount(), roomId));
+        }
+        else
+        {
+            // clear state
+            adapter.setUnreadMessageId(null);
+        }
 
         this.swipeRefreshLayout.setRefreshing(true);
         this.getLoaderManager().getLoader(LOADER_SHOW_ROOM).forceLoad();
